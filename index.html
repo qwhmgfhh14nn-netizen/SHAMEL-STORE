@@ -1,48 +1,84 @@
-مشروع SHAMEL – شامل
 
-أنشئ متجرًا إلكترونيًا احترافيًا متعدد البائعين، شبيهًا بتجربة Amazon، باسم SHAMEL.
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#102b46">
+<title>SHAMEL | شامل</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f5f7fa;color:#172b40;font-family:Arial,sans-serif}
+header{background:#102b46;color:white;padding:18px}
+.top{display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:27px;font-weight:bold}
+.logo span{color:#e9b94e}
+button{cursor:pointer;border:0;border-radius:9px;padding:12px}
+.account{background:#e9b94e;color:#102b46;font-weight:bold}
+.search{padding:15px}
+.search input{width:100%;padding:15px;border:1px solid #ddd;border-radius:12px;font-size:16px}
+nav{display:flex;gap:9px;overflow:auto;padding:0 15px 15px}
+nav button{background:white;color:#102b46;white-space:nowrap;border:1px solid #e3e8ee}
+.hero{margin:5px 15px 20px;background:#102b46;color:white;padding:25px 20px;border-radius:16px}
+.hero h2{font-size:25px;margin:0 0 10px}
+.hero p{line-height:1.8;color:#e2e9ef}
+main{padding:15px}
+.section-title{font-size:20px}
+.empty{background:white;border:1px solid #e6eaf0;border-radius:15px;padding:35px 15px;text-align:center;margin-top:15px}
+.empty .symbol{font-size:45px}
+.empty p{color:#718096;line-height:1.8}
+footer{background:#102b46;color:white;margin-top:35px;padding:25px 15px;text-align:center}
+.links{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;margin:20px 0}
+.links a{color:white;text-decoration:none}
+.note{font-size:12px;color:#c5d0da}
+</style>
+</head>
+<body>
+<header>
+ <div class="top">
+  <div class="logo">SHAMEL <span>شامل</span></div>
+  <button class="account" onclick="alert('سيتم تفعيل الحسابات بعد ربط نظام تسجيل الدخول')">حسابي</button>
+ </div>
+ <p>كل احتياجاتك في مكان واحد</p>
+</header>
 
-شروط أساسية
+<div class="search">
+ <input id="search" type="search" placeholder="ابحث عن المنتجات والأقسام...">
+</div>
 
-- ممنوع إضافة أي منتجات تجريبية أو وهمية.
-- المتجر يبدأ فارغًا تمامًا حتى يضيف البائعون منتجاتهم.
-- لا تستخدم بيانات وهمية لإظهار أن الوظائف تعمل.
-- واجهة عربية وإنجليزية مع دعم اتجاه RTL وLTR.
-- تصميم احترافي متجاوب مع الهواتف.
-- بدون علامة مائية أو شعارات منصات البناء.
+<nav>
+ <button>الرئيسية</button>
+ <button>إلكترونيات</button>
+ <button>ملابس</button>
+ <button>أجهزة منزلية</button>
+ <button>أثاث</button>
+ <button>سيارات</button>
+ <button>أقسام أخرى</button>
+</nav>
 
-الوظائف المطلوبة
+<section class="hero">
+ <h2>أهلاً بك في SHAMEL</h2>
+ <p>اكتشف عالمًا من المنتجات والمتاجر في مكان واحد. تجربة تسوق سهلة ومميزة.</p>
+ <button class="account" onclick="alert('سيتم تفعيل التسوق بعد تجهيز النظام')">اكتشف المتجر</button>
+</section>
 
-1. تسجيل العملاء والبائعين وتسجيل الدخول.
-2. تصفح المنتجات والأقسام والبحث.
-3. إضافة المنتجات بالصور والاسم والسعر والوصف.
-4. صفحة مستقلة لكل بائع.
-5. سلة مشتريات وإتمام الطلب.
-6. الدفع عند الاستلام.
-7. التواصل مع البائع عبر واتساب والمحادثة.
-8. التقييمات والمراجعات.
-9. باقات واشتراكات البائعين.
-10. لوحة تحكم كاملة للمالك.
-11. مساعد SHAMEL AI مرتبط ببيانات المنتجات الحقيقية.
-12. فيديوهات قصيرة للمنتجات.
-13. البحث عن المنتجات بالصور.
-14. تتبع الطلبات.
-15. نظام النقاط والمكافآت.
-16. دعوة الأصدقاء.
-17. البث المباشر للبيع.
-18. نظام إشعارات.
-19. إدارة العروض والخصومات والإعلانات المميزة.
-20. تقارير المبيعات والمشاهدات والأرباح.
+<main>
+ <h2 class="section-title">جميع المنتجات</h2>
+ <section class="empty">
+  <div class="symbol">🛍️</div>
+  <h3>المتجر جاهز لاستقبال منتجاته</h3>
+  <p>لا توجد منتجات معروضة حاليًا.<br>ستظهر المنتجات الحقيقية بعد تسجيل البائعين وإضافتهم منتجاتهم.</p>
+ </section>
+</main>
 
-متطلبات تقنية
-
-- قاعدة بيانات حقيقية.
-- حفظ الصور والملفات.
-- صلاحيات منفصلة للمالك والبائع والعميل.
-- حماية بيانات المستخدمين.
-- عدم إظهار أي وظيفة على أنها تعمل قبل تنفيذها واختبارها.
-- إمكانية تثبيت التطبيق على Android كتطبيق PWA.
-- استخدام خدمات مجانية قدر الإمكان.
-- تنظيم المشروع في ملفات مستقلة قابلة للتطوير.
-
-يجب بناء مشروع حقيقي قابل للتشغيل، وليس مجرد تصميم واجهات أو نموذج تجريبي.
+<footer>
+ <div class="logo">SHAMEL <span>شامل</span></div>
+ <div class="links">
+  <a href="#">عن شامل</a>
+  <a href="#">خدمة العملاء</a>
+  <a href="#">سياسة الاستخدام</a>
+ </div>
+ <p class="note">SHAMEL © 2026</p>
+</footer>
+</body>
+</html>
