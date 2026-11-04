@@ -1,4 +1,3 @@
-
 /* SHAMEL Storefront - improved authentication and store flow */
 (function () {
   "use strict";
