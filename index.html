@@ -1,215 +1,38 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#102b46">
-<meta name="description" content="SHAMEL - كل احتياجاتك في مكان واحد">
-<title>SHAMEL | شامل</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#102b46"><title>SHAMEL | شامل</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;padding-bottom:85px;background:#f5f7fa;color:#172b40;font-family:Arial,sans-serif}
-header{background:#102b46;color:#fff;padding:17px}
-.top{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.logo{font-size:25px;font-weight:bold}
-.logo span{color:#e9b94e}
-button{cursor:pointer;border:0;border-radius:9px;padding:11px 14px;font-size:14px}
-button:disabled{opacity:.6;cursor:wait}
-.gold{background:#e9b94e;color:#102b46;font-weight:bold}
-.light{background:#fff;color:#102b46;border:1px solid #e3e8ee}
-.search{padding:13px 15px}
-.search input,.field{width:100%;padding:13px;border:1px solid #dce3ea;border-radius:11px;font-size:15px;background:#fff}
-nav{display:flex;gap:8px;overflow:auto;padding:0 15px 14px}
-nav button{background:#fff;color:#102b46;white-space:nowrap;border:1px solid #e3e8ee}
-.hero{margin:5px 15px 18px;background:#102b46;color:#fff;padding:23px 18px;border-radius:16px}
-.hero h2{font-size:23px;margin:0 0 9px}
-.hero p{line-height:1.8;color:#e2e9ef}
-main{padding:14px}
-.page{display:none}
-.page.active{display:block}
-.section-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.section-title{font-size:20px}
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
-.product{background:#fff;border:1px solid #e6eaf0;border-radius:13px;overflow:hidden}
-.product img{width:100%;height:145px;object-fit:cover;background:#edf1f5}
-.product-info{padding:10px}
-.product h3{font-size:15px;margin:0 0 8px;line-height:1.5}
-.price{font-weight:bold;color:#0d684b;margin:7px 0}
-.muted{color:#718096;font-size:13px;line-height:1.7}
-.product-actions{display:flex;gap:6px;margin-top:9px}
-.product-actions button{flex:1;padding:9px 5px;font-size:12px}
-.empty,.panel{background:#fff;border:1px solid #e6eaf0;border-radius:14px;padding:23px 15px;text-align:center;margin:12px 0}
-.empty .symbol{font-size:42px}
-.empty p{color:#718096;line-height:1.8}
-.panel{text-align:right;padding:17px}
-.panel h3{margin-top:0}
-.field{margin:6px 0 11px}
-.actions{display:flex;gap:8px;flex-wrap:wrap}
-.actions button{flex:1}
-.category-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-.category{background:#fff;border:1px solid #e6eaf0;border-radius:12px;padding:15px;text-align:center;color:#102b46}
-.bottom-nav{position:fixed;bottom:0;right:0;left:0;display:grid;grid-template-columns:repeat(5,1fr);background:#fff;border-top:1px solid #e3e8ee;padding:8px 3px calc(8px + env(safe-area-inset-bottom));z-index:100}
-.bottom-nav button{background:transparent;color:#64748b;padding:7px 2px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px}
-.bottom-nav .ico{font-size:21px}
-.bottom-nav button.active{color:#102b46;background:#fff8e7;font-weight:bold}
-footer{background:#102b46;color:#fff;margin-top:30px;padding:23px 15px;text-align:center}
-.links{display:flex;justify-content:center;gap:15px;flex-wrap:wrap;margin:17px 0}
-.links a{color:#fff;text-decoration:none}
-.note{font-size:12px;color:#c5d0da}
-.status{padding:9px 12px;border-radius:9px;background:#eef5f9;color:#345;margin:10px 0;font-size:13px}
-.hidden{display:none!important}
-.auth-choice{width:100%;margin:6px 0;padding:13px;font-weight:bold}
-.divider{border:0;border-top:1px solid #e6eaf0;margin:18px 0}
-@media(min-width:700px){
-main,.search,nav{max-width:1000px;margin-left:auto;margin-right:auto}
-.grid{grid-template-columns:repeat(4,minmax(0,1fr))}
-.product img{height:180px}
-}
-</style>
-</head>
-<body>
-
-<header>
-<div class="top">
-<div class="logo">SHAMEL <span>شامل</span></div>
-<button class="gold" onclick="showPage('account')">حسابي</button>
-</div>
-<p>كل احتياجاتك في مكان واحد</p>
-</header>
-
-<div class="search">
-<input id="search" type="search" placeholder="ابحث عن المنتجات..." autocomplete="off">
-</div>
-
-<nav>
-<button onclick="showPage('home')">الرئيسية</button>
-<button onclick="showPage('categories')">كل الأقسام</button>
-<button onclick="filterCategory('إلكترونيات')">إلكترونيات</button>
-<button onclick="filterCategory('ملابس')">ملابس</button>
-<button onclick="filterCategory('أجهزة منزلية')">أجهزة منزلية</button>
-<button onclick="filterCategory('أثاث')">أثاث</button>
-</nav>
-
-<section id="home" class="page active">
-<section class="hero">
-<h2>أهلاً بك في SHAMEL</h2>
-<p>اكتشف المنتجات والمتاجر في مكان واحد، وتسوق بسهولة وأمان.</p>
-<button class="gold" onclick="showPage('categories')">اكتشف الأقسام</button>
-</section>
-<main>
-<div class="section-head">
-<h2 class="section-title">أحدث المنتجات</h2>
-<button class="light" onclick="loadProducts()">تحديث</button>
-</div>
-<div id="connection-status" class="status">جارٍ الاتصال بالمتجر...</div>
-<div id="products-grid" class="grid"></div>
-<div id="products-empty" class="empty hidden">
-<div class="symbol">🛍️</div>
-<h3>لا توجد منتجات منشورة حاليًا</h3>
-<p>ستظهر هنا المنتجات الحقيقية بعد إضافتها ونشرها.</p>
-</div>
-</main>
-</section>
-
-<section id="categories" class="page">
-<main>
-<h2 class="section-title">الأقسام</h2>
-<div id="categories-list" class="category-list"></div>
-<div id="categories-empty" class="empty hidden"><p>لا توجد أقسام نشطة حاليًا.</p></div>
-</main>
-</section>
-
-<section id="cart" class="page">
-<main><h2 class="section-title">سلة التسوق</h2><div id="cart-content"></div></main>
-</section>
-
-<section id="favorites" class="page">
-<main>
-<h2 class="section-title">المفضلة</h2>
-<div id="favorites-grid" class="grid"></div>
-<div id="favorites-empty" class="empty">
-<div class="symbol">❤️</div><h3>لا توجد منتجات في المفضلة</h3>
-</div>
-</main>
-</section>
-
-<section id="account" class="page">
-<main>
-<h2 class="section-title">حسابي</h2>
-<div id="auth-status" class="status">أنت تتصفح كزائر.</div>
-
-<div id="auth-form" class="panel">
-<h3>مرحبًا بك في شامل</h3>
-<p class="muted">اختر طريقة الدخول أو إنشاء حساب جديد</p>
-
-<button class="light auth-choice" id="google-btn">🌐 المتابعة باستخدام Google</button>
-
-<hr class="divider">
-
-<h3>الدخول برقم الهاتف</h3>
-<input class="field" id="auth-phone" type="tel"
-placeholder="رقم الهاتف الدولي مثال: +201xxxxxxxxx">
-<button class="gold auth-choice" id="phone-send-btn">إرسال رمز التحقق</button>
-
-<div id="phone-verify-box" class="hidden">
-<input class="field" id="phone-otp" type="text"
-inputmode="numeric" maxlength="6" placeholder="رمز التحقق">
-<button class="gold auth-choice" id="phone-verify-btn">تأكيد الرمز والدخول</button>
-</div>
-
-<hr class="divider">
-
-<h3>الدخول بالبريد الإلكتروني</h3>
-<input class="field" id="auth-email" type="email" placeholder="البريد الإلكتروني">
-<input class="field" id="auth-password" type="password" placeholder="كلمة المرور">
-
-<div class="actions">
-<button class="gold" id="login-btn">دخول</button>
-<button class="light" id="signup-btn">إنشاء حساب</button>
-</div>
-<button class="light" id="reset-btn" style="width:100%;margin-top:9px">نسيت كلمة المرور؟</button>
-
-<div id="new-password-box" class="hidden">
-<hr class="divider">
-<h3>تعيين كلمة مرور جديدة</h3>
-<input class="field" id="new-password" type="password" placeholder="كلمة المرور الجديدة">
-<button class="gold auth-choice" id="save-new-password-btn">حفظ كلمة المرور الجديدة</button>
-</div>
-
-<p class="muted">يمكنك تصفح المتجر كزائر دون تسجيل.</p>
-</div>
-
-<div id="signed-in-panel" class="panel hidden">
-<h3>أهلًا بك في شامل ❤️</h3>
-<button class="light" id="logout-btn">تسجيل الخروج</button>
-</div>
-
-<div class="panel">
-<h3>التواصل مع شامل</h3>
-<a href="https://wa.me/201206449934" target="_blank" rel="noopener">تواصل عبر واتساب</a>
-</div>
-</main>
-</section>
-
-<footer>
-<div class="logo">SHAMEL <span>شامل</span></div>
-<div class="links">
-<a href="#" onclick="showPage('account');return false">حسابي</a>
-<a href="https://wa.me/201206449934" target="_blank" rel="noopener">تواصل معنا</a>
-</div>
-<p class="note">SHAMEL © 2026</p>
-</footer>
-
-<div class="bottom-nav">
-<button class="active" data-page="home" onclick="showPage('home',this)"><span class="ico">🏠</span>الرئيسية</button>
-<button data-page="categories" onclick="showPage('categories',this)"><span class="ico">▦</span>الأقسام</button>
-<button data-page="cart" onclick="showPage('cart',this)"><span class="ico">🛒</span>السلة</button>
-<button data-page="favorites" onclick="showPage('favorites',this)"><span class="ico">♡</span>المفضلة</button>
-<button data-page="account" onclick="showPage('account',this)"><span class="ico">👤</span>حسابي</button>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js"></script>
-<script src="app.js"></script>
-</body>
-</html>
+*{box-sizing:border-box}body{margin:0;padding-bottom:80px;background:#f5f7fa;color:#172b40;font-family:Arial}
+header,footer{background:#102b46;color:white;padding:18px}header p{margin-bottom:0}
+.logo{font-size:25px;font-weight:bold}.logo span{color:#e9b94e}
+button{border:0;border-radius:9px;padding:11px;cursor:pointer}.gold{background:#e9b94e;color:#102b46;font-weight:bold}.light{background:white;color:#102b46;border:1px solid #ddd}
+main{padding:14px}.page{display:none}.page.active{display:block}.hero,.panel,.empty{background:white;border-radius:14px;padding:18px;margin:12px 0}.hero{background:#102b46;color:white}
+input,textarea{width:100%;padding:12px;border:1px solid #ddd;border-radius:9px;margin:6px 0}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.product{background:white;border:1px solid #eee;border-radius:12px;overflow:hidden}.product img{width:100%;height:140px;object-fit:cover}.product-info{padding:10px}.price{color:#08734e;font-weight:bold}
+.muted{color:#687789;font-size:13px}.status{background:#eef5f9;padding:10px;border-radius:9px;margin:10px 0}
+nav{display:flex;gap:7px;overflow:auto;padding:12px}nav button{white-space:nowrap;background:white}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:white;display:grid;grid-template-columns:repeat(5,1fr);z-index:5}
+.bottom-nav button{background:white;font-size:12px}.bottom-nav .active{background:#fff4d6}
+.actions{display:flex;gap:8px}.actions button{flex:1}.hidden{display:none!important}
+@media(min-width:700px){main{max-width:1000px;margin:auto}.grid{grid-template-columns:repeat(4,1fr)}}
+</style></head><body>
+<header><div class="logo">SHAMEL <span>شامل</span></div><p>كل احتياجاتك في مكان واحد</p><button class="gold" onclick="showPage('account')">حسابي</button></header>
+<input id="search" placeholder="ابحث عن المنتجات..." style="width:calc(100% - 28px);margin:14px">
+<nav><button onclick="showPage('home')">الرئيسية</button><button onclick="showPage('categories')">الأقسام</button></nav>
+<section id="home" class="page active"><main><div class="hero"><h2>أهلاً بك في SHAMEL</h2><p>اكتشف المنتجات وتسوق بسهولة.</p></div><div id="connection-status" class="status">جارٍ الاتصال...</div><div id="products-grid" class="grid"></div><div id="products-empty" class="empty hidden">لا توجد منتجات منشورة حاليًا.</div></main></section>
+<section id="categories" class="page"><main><h2>الأقسام</h2><div id="categories-list" class="grid"></div><div id="categories-empty" class="empty hidden">لا توجد أقسام.</div></main></section>
+<section id="cart" class="page"><main><h2>سلة التسوق</h2><div id="cart-content"></div></main></section>
+<section id="favorites" class="page"><main><h2>المفضلة</h2><div id="favorites-grid" class="grid"></div><div id="favorites-empty" class="empty">لا توجد مفضلة.</div></main></section>
+<section id="orders" class="page"><main><h2>طلباتي</h2><div id="orders-content"></div></main></section>
+<section id="account" class="page"><main><h2>حسابي</h2><div id="auth-status" class="status">زائر</div>
+<div id="auth-form" class="panel"><button id="google-btn" class="light">Google</button><h3>رقم الهاتف</h3><input id="auth-phone" placeholder="+201xxxxxxxxx"><button id="phone-send-btn" class="gold">إرسال الرمز</button><div id="phone-verify-box" class="hidden"><input id="phone-otp" placeholder="رمز التحقق"><button id="phone-verify-btn">تأكيد</button></div>
+<h3>البريد الإلكتروني</h3><input id="auth-email" type="email" placeholder="البريد الإلكتروني"><input id="auth-password" type="password" placeholder="كلمة المرور">
+<div class="actions"><button id="login-btn" class="gold">دخول</button><button id="signup-btn" class="light">إنشاء حساب</button></div><button id="reset-btn" class="light">نسيت كلمة المرور؟</button>
+<div id="new-password-box" class="hidden"><input id="new-password" type="password" placeholder="كلمة المرور الجديدة"><button id="save-new-password-btn">حفظ</button></div></div>
+<div id="signed-in-panel" class="panel hidden"><button onclick="showPage('orders')">طلباتي</button><button id="logout-btn">تسجيل الخروج</button></div>
+<p><a href="https://wa.me/201206449934">تواصل عبر واتساب</a></p></main></section>
+<footer><div class="logo">SHAMEL <span>شامل</span></div><p>SHAMEL © 2026</p></footer>
+<div class="bottom-nav"><button data-page="home" class="active" onclick="showPage('home')">🏠 الرئيسية</button><button data-page="categories" onclick="showPage('categories')">الأقسام</button><button data-page="cart" onclick="showPage('cart')">🛒 السلة</button><button data-page="favorites" onclick="showPage('favorites')">♡ المفضلة</button><button data-page="account" onclick="showPage('account')">حسابي</button></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js"></script><script src="app.js"></script></body></html>
