@@ -1,0 +1,195 @@
+(() => {
+  "use strict";
+
+  const db = window.shamelSupabase;
+
+  const $ = (id) => document.getElementById(id);
+
+  const escapeHTML = (value) =>
+    String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    })[char]);
+
+  async function currentUser() {
+    if (!db) throw new Error("اتصال قاعدة البيانات غير جاهز.");
+
+    const { data, error } = await db.auth.getUser();
+    if (error) throw error;
+    if (!data.user) throw new Error("سجّل الدخول أولاً.");
+
+    return data.user;
+  }
+
+  function showResult(elementId, text) {
+    const element = $(elementId);
+    if (element) element.textContent = text;
+  }
+
+  // عرض التقييمات
+  async function loadReviews(productId, containerId) {
+    try {
+      const { data, error } = await db
+        .from("product_reviews")
+        .select("rating,review_text,created_at")
+        .eq("product_id", productId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const container = $(containerId);
+      if (!container) return;
+
+      if (!data || data.length === 0) {
+        container.textContent = "لا توجد تقييمات لهذا المنتج حتى الآن.";
+        return;
+      }
+
+      container.innerHTML = data.map((review) => `
+        <article class="shamel-review">
+          <div>${"★".repeat(review.rating)}${"☆".repeat(5 - review.rating)}</div>
+          <p>${escapeHTML(review.review_text || "بدون تعليق")}</p>
+          <small>${escapeHTML(
+            new Date(review.created_at).toLocaleDateString("ar-EG")
+          )}</small>
+        </article>
+      `).join("");
+    } catch (error) {
+      showResult(containerId, error.message);
+    }
+  }
+
+  // إضافة أو تعديل تقييم المنتج
+  async function saveReview(productId, rating, reviewText) {
+    try {
+      const user = await currentUser();
+
+      const selectedRating = Number(rating);
+      if (!Number.isInteger(selectedRating) ||
+          selectedRating < 1 ||
+          selectedRating > 5) {
+        throw new Error("اختر تقييمًا من نجمة إلى خمس نجوم.");
+      }
+
+      const { error } = await db
+        .from("product_reviews")
+        .upsert({
+          product_id: productId,
+          buyer_id: user.id,
+          rating: selectedRating,
+          review_text: String(reviewText || "").trim()
+        }, {
+          onConflict: "product_id,buyer_id"
+        });
+
+      if (error) throw error;
+
+      return { success: true, message: "تم حفظ تقييمك." };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  }
+
+  // إنشاء محادثة مع متجر
+  async function startConversation(storeId, sellerId) {
+    try {
+      const user = await currentUser();
+
+      if (user.id === sellerId) {
+        throw new Error("لا يمكنك بدء محادثة مع متجرك.");
+      }
+
+      const { data, error } = await db
+        .from("store_conversations")
+        .upsert({
+          store_id: storeId,
+          buyer_id: user.id,
+          seller_id: sellerId
+        }, {
+          onConflict: "store_id,buyer_id"
+        })
+        .select("id")
+        .single();
+
+      if (error) throw error;
+
+      return { success: true, conversationId: data.id };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  }
+
+  // إرسال رسالة
+  async function sendMessage(conversationId, messageText) {
+    try {
+      const user = await currentUser();
+      const text = String(messageText || "").trim();
+
+      if (!text) throw new Error("اكتب الرسالة أولاً.");
+      if (text.length > 5000) {
+        throw new Error("الرسالة طويلة جدًا.");
+      }
+
+      const { error } = await db
+        .from("conversation_messages")
+        .insert({
+          conversation_id: conversationId,
+          sender_id: user.id,
+          message_text: text
+        });
+
+      if (error) throw error;
+
+      return { success: true, message: "تم إرسال الرسالة." };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  }
+
+  // تحميل رسائل محادثة
+  async function loadMessages(conversationId, containerId) {
+    try {
+      const { data, error } = await db
+        .from("conversation_messages")
+        .select("id,sender_id,message_text,created_at")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      const container = $(containerId);
+      if (!container) return;
+
+      if (!data || data.length === 0) {
+        container.textContent = "ابدأ المحادثة بإرسال أول رسالة.";
+        return;
+      }
+
+      const user = await currentUser();
+
+      container.innerHTML = data.map((item) => `
+        <div class="shamel-message ${
+          item.sender_id === user.id ? "mine" : "other"
+        }">
+          <p>${escapeHTML(item.message_text)}</p>
+          <small>${escapeHTML(
+            new Date(item.created_at).toLocaleString("ar-EG")
+          )}</small>
+        </div>
+      `).join("");
+    } catch (error) {
+      showResult(containerId, error.message);
+    }
+  }
+
+  window.ShamelReviewsChat = {
+    loadReviews,
+    saveReview,
+    startConversation,
+    sendMessage,
+    loadMessages
+  };
+})();
