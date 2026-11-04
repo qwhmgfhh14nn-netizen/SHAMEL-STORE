@@ -45,6 +45,8 @@ nav button{white-space:nowrap;background:white}
 .dashboard-card h3{margin-top:0}
 footer{text-align:center}
 a{color:inherit}
+table{width:100%;border-collapse:collapse;display:block;overflow-x:auto}
+th,td{text-align:right;white-space:nowrap;padding:9px}
 @media(min-width:700px){
  main{max-width:1000px;margin:auto}
  .grid{grid-template-columns:repeat(4,1fr)}
@@ -154,7 +156,6 @@ a{color:inherit}
   </main>
 </section>
 
-<!-- لوحة تحكم المالك والتاجر -->
 <section id="dashboard" class="page">
   <main>
     <h2>لوحة التحكم</h2>
@@ -182,7 +183,6 @@ a{color:inherit}
       <div id="owner-overview" class="dashboard-card">
         <h3>مرحباً بك في إدارة SHAMEL</h3>
         <p>من هنا يمكنك متابعة أقسام الإدارة.</p>
-        <p>ستظهر بيانات الإدارة بعد ربط وظائف لوحة التحكم.</p>
       </div>
 
       <div id="owner-products" class="dashboard-card hidden">
@@ -220,7 +220,7 @@ a{color:inherit}
 
       <div id="seller-overview" class="dashboard-card">
         <h3>مرحباً بك في لوحة التاجر</h3>
-        <p>تابع متجرك ومنتجاتك وطلباتك من هنا.</p>
+        <p>تابع متجرك ومنتجاتك واشتراكاتك من هنا.</p>
       </div>
 
       <div id="seller-products" class="dashboard-card hidden">
@@ -265,88 +265,104 @@ a{color:inherit}
 <script src="supabase-config.js"></script>
 <script src="app.js"></script>
 
+<!-- ملف لوحة التحكم المحفوظ -->
+<script src="shamel-dashboard"></script>
+
 <script>
-(function(){
+(function () {
   "use strict";
 
   const $ = id => document.getElementById(id);
 
-  function showSection(id){
-    document.querySelectorAll("#dashboard .dashboard-card")
-      .forEach(el => el.classList.add("hidden"));
+  function showPage(id) {
+    document.querySelectorAll(".page").forEach(page => {
+      page.classList.remove("active");
+    });
 
-    $(id)?.classList.remove("hidden");
+    const page = $(id);
+    if (page) page.classList.add("active");
+
+    document.querySelectorAll(".bottom-nav button").forEach(button => {
+      button.classList.toggle("active", button.dataset.page === id);
+    });
+
+    if (id === "dashboard") {
+      window.SHAMELDashboard?.loadRole();
+    }
   }
 
-  async function loadRole(){
+  function showSection(id) {
+    document.querySelectorAll(
+      "#owner-tools .dashboard-card, #seller-tools .dashboard-card"
+    ).forEach(card => card.classList.add("hidden"));
+
+    $(id)?.classList.remove("hidden");
+
+    const actions = {
+      "owner-products": "loadProducts",
+      "owner-orders": "loadOrders",
+      "owner-sellers": "loadStores",
+      "owner-subscriptions": "loadSubscriptionRequests",
+      "seller-products": "loadMyProducts",
+      "seller-subscriptions": "loadMySubscriptions"
+    };
+
+    const method = actions[id];
+    if (method && window.ShamelDashboard?.[method]) {
+      window.ShamelDashboard[method]();
+    }
+  }
+
+  async function loadRole() {
     const roleBox = $("dashboard-role");
     const owner = $("owner-tools");
     const seller = $("seller-tools");
     const noAccess = $("dashboard-no-access");
     const loginRequired = $("dashboard-login-required");
 
-    if(owner) owner.classList.add("hidden");
-    if(seller) seller.classList.add("hidden");
-    if(noAccess) noAccess.classList.add("hidden");
-    if(loginRequired) loginRequired.classList.add("hidden");
+    [owner, seller, noAccess, loginRequired].forEach(element => {
+      element?.classList.add("hidden");
+    });
 
-    const db = window.shamelSupabase || window.supabaseClient;
-
-    if(!db){
-      if(roleBox) roleBox.textContent = "تعذر الاتصال بقاعدة البيانات.";
+    if (!window.ShamelDashboard) {
+      if (roleBox) {
+        roleBox.textContent = "ملف لوحة التحكم لم يتم تحميله. راجع اسم الملف.";
+      }
       return;
     }
 
-    const {data:{session}} = await db.auth.getSession();
-    const user = session?.user;
+    await window.ShamelDashboard.init();
 
-    if(!user){
-      if(roleBox) roleBox.textContent = "يجب تسجيل الدخول أولاً.";
-      loginRequired?.classList.remove("hidden");
-      return;
-    }
+    const message = roleBox?.textContent || "";
 
-    const {data,error} = await db
-      .from("user_roles")
-      .select("role")
-      .eq("user_id",user.id)
-      .maybeSingle();
-
-    if(error){
-      if(roleBox) roleBox.textContent = "تعذر التحقق من الصلاحيات.";
-      console.error(error);
-      return;
-    }
-
-    const role = data?.role;
-
-    if(roleBox) roleBox.textContent =
-      role === "owner" ? "تم التحقق: المالك" :
-      role === "seller" ? "تم التحقق: التاجر" :
-      role === "buyer" ? "حساب عميل" : "حساب زائر";
-
-    if(role === "owner"){
+    if (message.includes("المالك")) {
       owner?.classList.remove("hidden");
       showSection("owner-overview");
-    }else if(role === "seller"){
+    } else if (message.includes("التاجر")) {
       seller?.classList.remove("hidden");
       showSection("seller-overview");
-    }else{
+    } else if (
+      message.includes("سجّل الدخول") ||
+      message.includes("تسجيل الدخول")
+    ) {
+      loginRequired?.classList.remove("hidden");
+    } else {
       noAccess?.classList.remove("hidden");
     }
   }
+
+  window.showPage = showPage;
 
   window.SHAMELDashboard = {
     showSection,
     loadRole
   };
 
-  document.addEventListener("click",function(e){
-    const button = e.target.closest('[onclick*="showPage(\'dashboard\')"]');
-    if(button) setTimeout(loadRole,100);
+  document.addEventListener("DOMContentLoaded", function () {
+    if (location.hash === "#dashboard") {
+      showPage("dashboard");
+    }
   });
-
-  window.addEventListener("load",loadRole);
 })();
 </script>
 
