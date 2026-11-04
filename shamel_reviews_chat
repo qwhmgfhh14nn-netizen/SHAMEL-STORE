@@ -1,0 +1,243 @@
+-- =========================================
+-- SHAMEL: Product Reviews + Buyer/Seller Chat
+-- =========================================
+
+-- 1. Product reviews
+CREATE TABLE IF NOT EXISTS public.product_reviews (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
+    buyer_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    review_text TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (product_id, buyer_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_reviews_product
+ON public.product_reviews(product_id);
+
+CREATE INDEX IF NOT EXISTS idx_product_reviews_buyer
+ON public.product_reviews(buyer_id);
+
+
+-- 2. Conversations
+CREATE TABLE IF NOT EXISTS public.store_conversations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    store_id UUID NOT NULL REFERENCES public.stores(id) ON DELETE CASCADE,
+    buyer_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    seller_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (buyer_id <> seller_id),
+    UNIQUE (store_id, buyer_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_store_conversations_buyer
+ON public.store_conversations(buyer_id);
+
+CREATE INDEX IF NOT EXISTS idx_store_conversations_seller
+ON public.store_conversations(seller_id);
+
+
+-- 3. Conversation messages
+CREATE TABLE IF NOT EXISTS public.conversation_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID NOT NULL
+        REFERENCES public.store_conversations(id) ON DELETE CASCADE,
+    sender_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    message_text TEXT NOT NULL CHECK (
+        LENGTH(TRIM(message_text)) BETWEEN 1 AND 5000
+    ),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    is_read BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE INDEX IF NOT EXISTS idx_conversation_messages_conversation
+ON public.conversation_messages(conversation_id, created_at);
+
+
+-- 4. Enable RLS
+ALTER TABLE public.product_reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.store_conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.conversation_messages ENABLE ROW LEVEL SECURITY;
+
+
+-- 5. Product reviews policies
+DROP POLICY IF EXISTS "Reviews visible on published products"
+ON public.product_reviews;
+
+CREATE POLICY "Reviews visible on published products"
+ON public.product_reviews
+FOR SELECT
+TO anon, authenticated
+USING (
+    EXISTS (
+        SELECT 1
+        FROM public.products p
+        WHERE p.id = product_reviews.product_id
+          AND p.is_published = TRUE
+    )
+    OR (SELECT public.is_shamel_owner())
+    OR buyer_id = (SELECT auth.uid())
+);
+
+DROP POLICY IF EXISTS "Buyers create their own reviews"
+ON public.product_reviews;
+
+CREATE POLICY "Buyers create their own reviews"
+ON public.product_reviews
+FOR INSERT
+TO authenticated
+WITH CHECK (
+    buyer_id = (SELECT auth.uid())
+    AND EXISTS (
+        SELECT 1
+        FROM public.products p
+        WHERE p.id = product_reviews.product_id
+          AND p.is_published = TRUE
+    )
+    AND EXISTS (
+        SELECT 1
+        FROM public.order_items oi
+        JOIN public.orders o ON o.id = oi.order_id
+        WHERE oi.product_id = product_reviews.product_id
+          AND o.buyer_id = (SELECT auth.uid())
+    )
+);
+
+DROP POLICY IF EXISTS "Buyers update their own reviews"
+ON public.product_reviews;
+
+CREATE POLICY "Buyers update their own reviews"
+ON public.product_reviews
+FOR UPDATE
+TO authenticated
+USING (buyer_id = (SELECT auth.uid()))
+WITH CHECK (buyer_id = (SELECT auth.uid()));
+
+DROP POLICY IF EXISTS "Owners or buyers delete reviews"
+ON public.product_reviews;
+
+CREATE POLICY "Owners or buyers delete reviews"
+ON public.product_reviews
+FOR DELETE
+TO authenticated
+USING (
+    buyer_id = (SELECT auth.uid())
+    OR (SELECT public.is_shamel_owner())
+);
+
+
+-- 6. Conversation policies
+DROP POLICY IF EXISTS "Conversation participants read conversations"
+ON public.store_conversations;
+
+CREATE POLICY "Conversation participants read conversations"
+ON public.store_conversations
+FOR SELECT
+TO authenticated
+USING (
+    buyer_id = (SELECT auth.uid())
+    OR seller_id = (SELECT auth.uid())
+    OR (SELECT public.is_shamel_owner())
+);
+
+DROP POLICY IF EXISTS "Buyers create conversations with store"
+ON public.store_conversations;
+
+CREATE POLICY "Buyers create conversations with store"
+ON public.store_conversations
+FOR INSERT
+TO authenticated
+WITH CHECK (
+    buyer_id = (SELECT auth.uid())
+    AND seller_id <> (SELECT auth.uid())
+    AND EXISTS (
+        SELECT 1
+        FROM public.stores s
+        WHERE s.id = store_conversations.store_id
+          AND s.seller_id = store_conversations.seller_id
+          AND s.is_active = TRUE
+    )
+);
+
+DROP POLICY IF EXISTS "Participants update conversations"
+ON public.store_conversations;
+
+CREATE POLICY "Participants update conversations"
+ON public.store_conversations
+FOR UPDATE
+TO authenticated
+USING (
+    buyer_id = (SELECT auth.uid())
+    OR seller_id = (SELECT auth.uid())
+    OR (SELECT public.is_shamel_owner())
+)
+WITH CHECK (
+    buyer_id = (SELECT auth.uid())
+    OR seller_id = (SELECT auth.uid())
+    OR (SELECT public.is_shamel_owner())
+);
+
+
+-- 7. Message policies
+DROP POLICY IF EXISTS "Participants read conversation messages"
+ON public.conversation_messages;
+
+CREATE POLICY "Participants read conversation messages"
+ON public.conversation_messages
+FOR SELECT
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1
+        FROM public.store_conversations c
+        WHERE c.id = conversation_messages.conversation_id
+          AND (
+              c.buyer_id = (SELECT auth.uid())
+              OR c.seller_id = (SELECT auth.uid())
+              OR (SELECT public.is_shamel_owner())
+          )
+    )
+);
+
+DROP POLICY IF EXISTS "Participants send messages"
+ON public.conversation_messages;
+
+CREATE POLICY "Participants send messages"
+ON public.conversation_messages
+FOR INSERT
+TO authenticated
+WITH CHECK (
+    sender_id = (SELECT auth.uid())
+    AND EXISTS (
+        SELECT 1
+        FROM public.store_conversations c
+        WHERE c.id = conversation_messages.conversation_id
+          AND (
+              c.buyer_id = (SELECT auth.uid())
+              OR c.seller_id = (SELECT auth.uid())
+          )
+    )
+);
+
+DROP POLICY IF EXISTS "Owners delete messages"
+ON public.conversation_messages;
+
+CREATE POLICY "Owners delete messages"
+ON public.conversation_messages
+FOR DELETE
+TO authenticated
+USING ((SELECT public.is_shamel_owner()));
+
+
+-- 8. Grants
+GRANT SELECT ON public.product_reviews TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.product_reviews TO authenticated;
+
+GRANT SELECT, INSERT, UPDATE ON public.store_conversations TO authenticated;
+
+GRANT SELECT, INSERT ON public.conversation_messages TO authenticated;
+
+-- Done
