@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -10,12 +8,13 @@
 <title>SHAMEL | شامل</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;padding-bottom:82px;background:#f5f7fa;color:#172b40;font-family:Arial,sans-serif}
+body{margin:0;padding-bottom:85px;background:#f5f7fa;color:#172b40;font-family:Arial,sans-serif}
 header{background:#102b46;color:#fff;padding:17px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .logo{font-size:25px;font-weight:bold}
 .logo span{color:#e9b94e}
 button{cursor:pointer;border:0;border-radius:9px;padding:11px 14px;font-size:14px}
+button:disabled{opacity:.6;cursor:wait}
 .gold{background:#e9b94e;color:#102b46;font-weight:bold}
 .light{background:#fff;color:#102b46;border:1px solid #e3e8ee}
 .search{padding:13px 15px}
@@ -59,6 +58,8 @@ footer{background:#102b46;color:#fff;margin-top:30px;padding:23px 15px;text-alig
 .note{font-size:12px;color:#c5d0da}
 .status{padding:9px 12px;border-radius:9px;background:#eef5f9;color:#345;margin:10px 0;font-size:13px}
 .hidden{display:none!important}
+.auth-choice{width:100%;margin:6px 0;padding:13px;font-weight:bold}
+.divider{border:0;border-top:1px solid #e6eaf0;margin:18px 0}
 @media(min-width:700px){
 main,.search,nav{max-width:1000px;margin-left:auto;margin-right:auto}
 .grid{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -114,17 +115,12 @@ main,.search,nav{max-width:1000px;margin-left:auto;margin-right:auto}
 <main>
 <h2 class="section-title">الأقسام</h2>
 <div id="categories-list" class="category-list"></div>
-<div id="categories-empty" class="empty hidden">
-<p>لا توجد أقسام نشطة حاليًا.</p>
-</div>
+<div id="categories-empty" class="empty hidden"><p>لا توجد أقسام نشطة حاليًا.</p></div>
 </main>
 </section>
 
 <section id="cart" class="page">
-<main>
-<h2 class="section-title">سلة التسوق</h2>
-<div id="cart-content"></div>
-</main>
+<main><h2 class="section-title">سلة التسوق</h2><div id="cart-content"></div></main>
 </section>
 
 <section id="favorites" class="page">
@@ -132,8 +128,7 @@ main,.search,nav{max-width:1000px;margin-left:auto;margin-right:auto}
 <h2 class="section-title">المفضلة</h2>
 <div id="favorites-grid" class="grid"></div>
 <div id="favorites-empty" class="empty">
-<div class="symbol">❤️</div>
-<h3>لا توجد منتجات في المفضلة</h3>
+<div class="symbol">❤️</div><h3>لا توجد منتجات في المفضلة</h3>
 </div>
 </main>
 </section>
@@ -142,21 +137,53 @@ main,.search,nav{max-width:1000px;margin-left:auto;margin-right:auto}
 <main>
 <h2 class="section-title">حسابي</h2>
 <div id="auth-status" class="status">أنت تتصفح كزائر.</div>
+
 <div id="auth-form" class="panel">
-<h3>تسجيل الدخول بالبريد الإلكتروني</h3>
+<h3>مرحبًا بك في شامل</h3>
+<p class="muted">اختر طريقة الدخول أو إنشاء حساب جديد</p>
+
+<button class="light auth-choice" id="google-btn">🌐 المتابعة باستخدام Google</button>
+
+<hr class="divider">
+
+<h3>الدخول برقم الهاتف</h3>
+<input class="field" id="auth-phone" type="tel"
+placeholder="رقم الهاتف الدولي مثال: +201xxxxxxxxx">
+<button class="gold auth-choice" id="phone-send-btn">إرسال رمز التحقق</button>
+
+<div id="phone-verify-box" class="hidden">
+<input class="field" id="phone-otp" type="text"
+inputmode="numeric" maxlength="6" placeholder="رمز التحقق">
+<button class="gold auth-choice" id="phone-verify-btn">تأكيد الرمز والدخول</button>
+</div>
+
+<hr class="divider">
+
+<h3>الدخول بالبريد الإلكتروني</h3>
 <input class="field" id="auth-email" type="email" placeholder="البريد الإلكتروني">
 <input class="field" id="auth-password" type="password" placeholder="كلمة المرور">
+
 <div class="actions">
 <button class="gold" id="login-btn">دخول</button>
 <button class="light" id="signup-btn">إنشاء حساب</button>
 </div>
 <button class="light" id="reset-btn" style="width:100%;margin-top:9px">نسيت كلمة المرور؟</button>
-<p class="muted">يمكنك تصفح المتجر كزائر. تسجيل الهاتف يحتاج إعداد مزود SMS في Supabase.</p>
+
+<div id="new-password-box" class="hidden">
+<hr class="divider">
+<h3>تعيين كلمة مرور جديدة</h3>
+<input class="field" id="new-password" type="password" placeholder="كلمة المرور الجديدة">
+<button class="gold auth-choice" id="save-new-password-btn">حفظ كلمة المرور الجديدة</button>
 </div>
+
+<p class="muted">يمكنك تصفح المتجر كزائر دون تسجيل.</p>
+</div>
+
 <div id="signed-in-panel" class="panel hidden">
-<h3>تم تسجيل الدخول</h3>
+<h3>أهلًا بك في شامل ❤️</h3>
 <button class="light" id="logout-btn">تسجيل الخروج</button>
 </div>
+
 <div class="panel">
 <h3>التواصل مع شامل</h3>
 <a href="https://wa.me/201206449934" target="_blank" rel="noopener">تواصل عبر واتساب</a>
@@ -174,21 +201,11 @@ main,.search,nav{max-width:1000px;margin-left:auto;margin-right:auto}
 </footer>
 
 <div class="bottom-nav">
-<button class="active" data-page="home" onclick="showPage('home',this)">
-<span class="ico">🏠</span>الرئيسية
-</button>
-<button data-page="categories" onclick="showPage('categories',this)">
-<span class="ico">▦</span>الأقسام
-</button>
-<button data-page="cart" onclick="showPage('cart',this)">
-<span class="ico">🛒</span>السلة
-</button>
-<button data-page="favorites" onclick="showPage('favorites',this)">
-<span class="ico">♡</span>المفضلة
-</button>
-<button data-page="account" onclick="showPage('account',this)">
-<span class="ico">👤</span>حسابي
-</button>
+<button class="active" data-page="home" onclick="showPage('home',this)"><span class="ico">🏠</span>الرئيسية</button>
+<button data-page="categories" onclick="showPage('categories',this)"><span class="ico">▦</span>الأقسام</button>
+<button data-page="cart" onclick="showPage('cart',this)"><span class="ico">🛒</span>السلة</button>
+<button data-page="favorites" onclick="showPage('favorites',this)"><span class="ico">♡</span>المفضلة</button>
+<button data-page="account" onclick="showPage('account',this)"><span class="ico">👤</span>حسابي</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
