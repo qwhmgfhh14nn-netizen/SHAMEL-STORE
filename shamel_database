@@ -1,0 +1,40 @@
+-- SHAMEL: limited order permissions migration
+-- Back up the project and inspect current policies before running.
+
+drop policy if exists "shamel_buyer_read_own_orders" on public.orders;
+
+create policy "shamel_buyer_read_own_orders"
+on public.orders
+for select to authenticated
+using (
+  buyer_id = (select auth.uid())
+  or public.is_shamel_owner()
+);
+
+drop policy if exists "shamel_buyer_read_own_order_items" on public.order_items;
+
+create policy "shamel_buyer_read_own_order_items"
+on public.order_items
+for select to authenticated
+using (
+  exists (
+    select 1
+    from public.orders o
+    where o.id = order_items.order_id
+      and (
+        o.buyer_id = (select auth.uid())
+        or public.is_shamel_owner()
+      )
+  )
+);
+
+revoke all
+on function public.create_shamel_order(jsonb,text)
+from public, anon;
+
+grant execute
+on function public.create_shamel_order(jsonb,text)
+to authenticated;
+
+-- لا تمنح anon أو authenticated صلاحية الكتابة إلى user_roles.
+-- لا تضع service_role key داخل ملفات الموقع.
