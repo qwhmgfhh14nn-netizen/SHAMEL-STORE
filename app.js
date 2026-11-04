@@ -1,4 +1,4 @@
-/* SHAMEL Storefront - improved authentication and store flow */
+/* SHAMEL Store - Email, Phone OTP, Google OAuth */
 (function () {
   "use strict";
 
@@ -15,18 +15,14 @@
   function status(message, error = false) {
     const el = $("connection-status");
     if (!el) return;
-
     el.textContent = message;
     el.style.background = error ? "#fff0f0" : "#eef5f9";
   }
 
   function escapeHTML(value) {
     return String(value ?? "").replace(/[&<>"']/g, c => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
+      "&": "&amp;", "<": "&lt;", ">": "&gt;",
+      '"': "&quot;", "'": "&#39;"
     }[c]));
   }
 
@@ -48,35 +44,27 @@
 
   function productCard(p) {
     const liked = favorites.has(p.id);
-
     return `
       <article class="product">
         <img src="${escapeHTML(imageFor(p))}"
-             alt="${escapeHTML(p.name)}"
-             loading="lazy"
-             onerror="this.src='https://placehold.co/600x400?text=SHAMEL'">
+          alt="${escapeHTML(p.name)}" loading="lazy"
+          onerror="this.src='https://placehold.co/600x400?text=SHAMEL'">
         <div class="product-info">
           <h3>${escapeHTML(p.name)}</h3>
           <div class="muted">${escapeHTML(getCategoryName(p.category_id))}</div>
           <div class="price">${money(p.price, p.currency_code)}</div>
-          <div class="muted">
-            ${Number(p.stock) > 0 ? "متاح" : "غير متوفر حاليًا"}
-          </div>
+          <div class="muted">${Number(p.stock) > 0 ? "متاح" : "غير متوفر حاليًا"}</div>
           <div class="product-actions">
             <button class="gold" onclick="SHAMEL.addCart('${p.id}')">أضف للسلة</button>
-            <button class="light" onclick="SHAMEL.toggleFavorite('${p.id}')">
-              ${liked ? "♥" : "♡"}
-            </button>
+            <button class="light" onclick="SHAMEL.toggleFavorite('${p.id}')">${liked ? "♥" : "♡"}</button>
           </div>
         </div>
-      </article>
-    `;
+      </article>`;
   }
 
   function renderProducts(list) {
     const grid = $("products-grid");
     if (!grid) return;
-
     grid.innerHTML = list.map(productCard).join("");
     $("products-empty")?.classList.toggle("hidden", list.length !== 0);
   }
@@ -84,8 +72,7 @@
   async function loadCategories() {
     if (!db) return;
 
-    const { data, error } = await db
-      .from("categories")
+    const { data, error } = await db.from("categories")
       .select("id,name_ar,name_en,image_url")
       .eq("is_active", true)
       .order("name_ar");
@@ -96,21 +83,21 @@
     }
 
     categories = data || [];
-
     const box = $("categories-list");
+
     if (box) {
-      box.innerHTML = categories.map(c => `
-        <button class="category"
-          onclick="SHAMEL.filterCategory('${escapeHTML(c.name_ar || c.name_en)}')">
-          ${escapeHTML(c.name_ar || c.name_en)}
-        </button>
-      `).join("");
+      box.innerHTML = "";
+      categories.forEach(c => {
+        const name = c.name_ar || c.name_en || "";
+        const button = document.createElement("button");
+        button.className = "category";
+        button.textContent = name;
+        button.addEventListener("click", () => filterCategory(name));
+        box.appendChild(button);
+      });
     }
 
-    $("categories-empty")?.classList.toggle(
-      "hidden",
-      categories.length > 0
-    );
+    $("categories-empty")?.classList.toggle("hidden", categories.length > 0);
   }
 
   async function loadProducts() {
@@ -121,12 +108,8 @@
 
     status("جارٍ تحميل المنتجات...");
 
-    const { data, error } = await db
-      .from("products")
-      .select(`
-        id,name,description,price,stock,images,
-        category_id,currency_code,created_at
-      `)
+    const { data, error } = await db.from("products")
+      .select("id,name,description,price,stock,images,category_id,currency_code,created_at")
       .eq("is_published", true)
       .order("created_at", { ascending: false });
 
@@ -141,11 +124,9 @@
     renderFavorites();
     renderCart();
 
-    status(
-      products.length
-        ? `تم تحميل ${products.length} منتجًا بنجاح.`
-        : "الاتصال ناجح، ولا توجد منتجات منشورة حاليًا."
-    );
+    status(products.length
+      ? `تم تحميل ${products.length} منتجًا بنجاح.`
+      : "الاتصال ناجح، ولا توجد منتجات منشورة حاليًا.");
   }
 
   async function loadFavorites() {
@@ -156,8 +137,7 @@
       return;
     }
 
-    const { data, error } = await db
-      .from("favorites")
+    const { data, error } = await db.from("favorites")
       .select("product_id")
       .eq("user_id", currentUser.id);
 
@@ -173,52 +153,38 @@
 
   function renderFavorites() {
     const list = products.filter(p => favorites.has(p.id));
-
     if ($("favorites-grid")) {
       $("favorites-grid").innerHTML = list.map(productCard).join("");
     }
-
-    $("favorites-empty")?.classList.toggle(
-      "hidden",
-      list.length > 0
-    );
+    $("favorites-empty")?.classList.toggle("hidden", list.length > 0);
   }
 
   async function toggleFavorite(id) {
     if (!currentUser) {
-      alert("يمكنك تصفح المتجر كزائر. سجّل الدخول لإضافة المفضلة.");
+      alert("سجّل الدخول لإضافة المنتجات للمفضلة.");
       showPage("account");
       return;
     }
 
     if (favorites.has(id)) {
-      const { error } = await db
-        .from("favorites")
-        .delete()
-        .eq("user_id", currentUser.id)
-        .eq("product_id", id);
-
+      const { error } = await db.from("favorites").delete()
+        .eq("user_id", currentUser.id).eq("product_id", id);
       if (error) {
         alert("تعذر حذف المنتج من المفضلة.");
         console.error(error);
         return;
       }
-
       favorites.delete(id);
     } else {
-      const { error } = await db
-        .from("favorites")
-        .insert({
-          user_id: currentUser.id,
-          product_id: id
-        });
-
+      const { error } = await db.from("favorites").insert({
+        user_id: currentUser.id,
+        product_id: id
+      });
       if (error) {
         alert("تعذرت إضافة المنتج للمفضلة.");
         console.error(error);
         return;
       }
-
       favorites.add(id);
     }
 
@@ -248,12 +214,8 @@
     if (!p) return;
 
     const found = cart.find(x => x.id === id);
-
-    if (found) {
-      found.quantity += 1;
-    } else {
-      cart.push({ id, quantity: 1 });
-    }
+    if (found) found.quantity += 1;
+    else cart.push({ id, quantity: 1 });
 
     saveCart();
     renderCart();
@@ -270,17 +232,14 @@
           <div class="symbol">🛒</div>
           <h3>سلتك فارغة</h3>
           <p>أضف المنتجات التي تريد شراءها.</p>
-        </div>
-      `;
+        </div>`;
       return;
     }
 
     let total = 0;
-
     const rows = cart.map(item => {
       const p = products.find(x => x.id === item.id);
       if (!p) return "";
-
       total += Number(p.price) * item.quantity;
 
       return `
@@ -292,29 +251,21 @@
             <button class="light" onclick="SHAMEL.changeQty('${p.id}',1)">+</button>
             <button class="light" onclick="SHAMEL.removeCart('${p.id}')">حذف</button>
           </div>
-        </div>
-      `;
+        </div>`;
     }).join("");
 
     box.innerHTML = rows + `
       <div class="panel">
         <b>الإجمالي التقريبي: ${money(total)}</b>
-        <p class="muted">
-          إتمام الطلب سيتم تفعيله بعد استكمال بيانات الشحن وربط إنشاء الطلبات.
-        </p>
-      </div>
-    `;
+        <p class="muted">إتمام الطلب يحتاج استكمال نظام الطلبات والشحن.</p>
+      </div>`;
   }
 
   function changeQty(id, delta) {
     const item = cart.find(x => x.id === id);
     if (!item) return;
-
     item.quantity += delta;
-    if (item.quantity <= 0) {
-      cart = cart.filter(x => x.id !== id);
-    }
-
+    if (item.quantity <= 0) cart = cart.filter(x => x.id !== id);
     saveCart();
     renderCart();
   }
@@ -327,23 +278,15 @@
 
   function filterCategory(name) {
     showPage("home");
-
-    const found = categories.find(
-      c => (c.name_ar || c.name_en) === name
-    );
-
+    const found = categories.find(c => (c.name_ar || c.name_en) === name);
     const filtered = found
       ? products.filter(p => p.category_id === found.id)
       : products.filter(p => getCategoryName(p.category_id) === name);
-
     renderProducts(filtered);
   }
 
   function showPage(id) {
-    document.querySelectorAll(".page").forEach(page => {
-      page.classList.remove("active");
-    });
-
+    document.querySelectorAll(".page").forEach(page => page.classList.remove("active"));
     $(id)?.classList.add("active");
 
     document.querySelectorAll(".bottom-nav button").forEach(btn => {
@@ -352,15 +295,34 @@
 
     if (id === "cart") renderCart();
     if (id === "favorites") renderFavorites();
-
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function friendlyAuthError(error) {
+    const message = String(error?.message || "").toLowerCase();
+
+    if (message.includes("invalid login credentials"))
+      return "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
+    if (message.includes("email not confirmed"))
+      return "يرجى تأكيد بريدك الإلكتروني من رسالة التفعيل.";
+    if (message.includes("user already registered"))
+      return "هذا البريد مسجل بالفعل. جرّب تسجيل الدخول.";
+    if (message.includes("password should be at least"))
+      return "كلمة المرور يجب أن تكون 6 أحرف على الأقل.";
+    if (message.includes("rate limit") || message.includes("security purposes"))
+      return "طلبات كثيرة في وقت قصير. انتظر قليلًا ثم حاول.";
+    if (message.includes("provider is not enabled"))
+      return "طريقة الدخول هذه غير مفعّلة في إعدادات Supabase حتى الآن.";
+    if (message.includes("network") || message.includes("fetch"))
+      return "تعذر الاتصال. تأكد من الإنترنت وحاول مرة أخرى.";
+
+    return error?.message || "حدث خطأ غير متوقع.";
   }
 
   async function refreshAuth() {
     if (!db) return;
 
     const { data, error } = await db.auth.getSession();
-
     if (error) {
       console.error("Session:", error);
       return;
@@ -368,47 +330,15 @@
 
     currentUser = data?.session?.user || null;
 
-    const authStatus = $("auth-status");
-    if (authStatus) {
-      authStatus.textContent = currentUser
-        ? "مرحبًا بك، " + (currentUser.email || "في شامل")
-        : "أنت تتصفح المتجر كزائر.";
-    }
+    const label = currentUser?.email || currentUser?.phone || "حسابك";
+    $("auth-status").textContent = currentUser
+      ? "مرحبًا بك، " + label
+      : "أنت تتصفح المتجر كزائر.";
 
     $("auth-form")?.classList.toggle("hidden", !!currentUser);
     $("signed-in-panel")?.classList.toggle("hidden", !currentUser);
 
     await loadFavorites();
-  }
-
-  function friendlyAuthError(error) {
-    const message = String(error?.message || "").toLowerCase();
-
-    if (message.includes("invalid login credentials")) {
-      return "البريد الإلكتروني أو كلمة المرور غير صحيحة. راجع البيانات أو استخدم نسيت كلمة المرور.";
-    }
-
-    if (message.includes("email not confirmed")) {
-      return "لازم تأكد بريدك الإلكتروني من رسالة Supabase قبل تسجيل الدخول.";
-    }
-
-    if (message.includes("user already registered")) {
-      return "هذا البريد مسجل بالفعل. جرّب تسجيل الدخول بدل إنشاء حساب جديد.";
-    }
-
-    if (message.includes("password should be at least")) {
-      return "كلمة المرور قصيرة. استخدم 6 أحرف على الأقل.";
-    }
-
-    if (message.includes("rate limit") || message.includes("security purposes")) {
-      return "طلبات كثيرة في وقت قصير. انتظر قليلًا ثم حاول مرة واحدة.";
-    }
-
-    if (message.includes("network") || message.includes("fetch")) {
-      return "تعذر الاتصال بالإنترنت. تأكد من الاتصال وحاول مرة أخرى.";
-    }
-
-    return error?.message || "حدث خطأ غير متوقع. حاول مرة أخرى.";
   }
 
   async function authAction(action) {
@@ -417,22 +347,10 @@
     const email = $("auth-email")?.value.trim() || "";
     const password = $("auth-password")?.value || "";
 
-    if (!email) {
-      alert("اكتب بريدك الإلكتروني أولًا.");
-      $("auth-email")?.focus();
-      return;
-    }
-
-    if (action !== "reset" && !password) {
-      alert("اكتب كلمة المرور.");
-      $("auth-password")?.focus();
-      return;
-    }
-
-    if (action === "signup" && password.length < 6) {
-      alert("كلمة المرور يجب أن تكون 6 أحرف على الأقل.");
-      return;
-    }
+    if (!email) return alert("اكتب بريدك الإلكتروني أولًا.");
+    if (action !== "reset" && !password) return alert("اكتب كلمة المرور.");
+    if (action === "signup" && password.length < 6)
+      return alert("كلمة المرور يجب أن تكون 6 أحرف على الأقل.");
 
     const buttonId = {
       login: "login-btn",
@@ -453,37 +371,28 @@
       let result;
 
       if (action === "login") {
-        result = await db.auth.signInWithPassword({
-          email,
-          password
-        });
+        result = await db.auth.signInWithPassword({ email, password });
       } else if (action === "signup") {
         result = await db.auth.signUp({
           email,
           password,
-          options: {
-            emailRedirectTo: window.location.origin
-          }
+          options: { emailRedirectTo: window.location.origin }
         });
-      } else if (action === "reset") {
+      } else {
         result = await db.auth.resetPasswordForEmail(email, {
           redirectTo: window.location.origin
         });
       }
 
-      if (result?.error) {
-        alert(friendlyAuthError(result.error));
-        return;
-      }
+      if (result.error) throw result.error;
 
       if (action === "login") {
         if (result.data?.session) {
-          currentUser = result.data.session.user;
           await refreshAuth();
           showPage("home");
-          alert("تم تسجيل الدخول بنجاح. أهلًا بك في شامل!");
+          alert("تم تسجيل الدخول بنجاح.");
         } else {
-          alert("لم يتم إنشاء جلسة دخول. راجع إعدادات الحساب وحاول مرة أخرى.");
+          alert("تمت مراجعة الطلب، لكن لم يتم إنشاء جلسة دخول. راجع تأكيد البريد.");
         }
       }
 
@@ -491,14 +400,14 @@
         if (result.data?.session) {
           await refreshAuth();
           showPage("home");
-          alert("تم إنشاء حسابك وتسجيل الدخول بنجاح.");
+          alert("تم إنشاء الحساب وتسجيل الدخول.");
         } else {
-          alert("تم إنشاء الحساب. افتح بريدك الإلكتروني واضغط رابط تأكيد الحساب، ثم ارجع لتسجيل الدخول.");
+          alert("تم إنشاء الحساب. افتح بريدك واضغط رابط التأكيد، ثم سجّل الدخول.");
         }
       }
 
       if (action === "reset") {
-        alert("إذا كان البريد مسجلًا، ستصلك رسالة استعادة كلمة المرور. افحص الوارد والرسائل غير المرغوب فيها.");
+        alert("إذا كان البريد مسجلًا، ستصلك رسالة استعادة كلمة المرور.");
       }
     } catch (error) {
       console.error("Authentication:", error);
@@ -512,11 +421,111 @@
     }
   }
 
+  async function googleLogin() {
+    if (!db) return alert("الاتصال بقاعدة البيانات غير جاهز.");
+
+    try {
+      const { error } = await db.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin }
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error(error);
+      alert(friendlyAuthError(error));
+    }
+  }
+
+  async function sendPhoneCode() {
+    if (!db) return alert("الاتصال بقاعدة البيانات غير جاهز.");
+
+    const phone = $("auth-phone")?.value.trim() || "";
+    if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
+      return alert("اكتب رقم الهاتف بالصيغة الدولية، مثال: +201xxxxxxxxx");
+    }
+
+    const button = $("phone-send-btn");
+    button.disabled = true;
+    button.textContent = "جارٍ الإرسال...";
+
+    try {
+      const { error } = await db.auth.signInWithOtp({
+        phone,
+        options: { channel: "sms" }
+      });
+      if (error) throw error;
+
+      $("phone-verify-box")?.classList.remove("hidden");
+      alert("تم طلب إرسال رمز التحقق. افحص رسائل هاتفك.");
+    } catch (error) {
+      console.error(error);
+      alert(friendlyAuthError(error));
+    } finally {
+      button.disabled = false;
+      button.textContent = "إرسال رمز التحقق";
+    }
+  }
+
+  async function verifyPhoneCode() {
+    if (!db) return alert("الاتصال بقاعدة البيانات غير جاهز.");
+
+    const phone = $("auth-phone")?.value.trim() || "";
+    const token = $("phone-otp")?.value.trim() || "";
+    if (!token) return alert("اكتب رمز التحقق.");
+
+    const button = $("phone-verify-btn");
+    button.disabled = true;
+    button.textContent = "جارٍ التحقق...";
+
+    try {
+      const { data, error } = await db.auth.verifyOtp({
+        phone, token, type: "sms"
+      });
+      if (error) throw error;
+
+      currentUser = data.user || null;
+      await refreshAuth();
+      showPage("home");
+      alert("تم تسجيل الدخول بنجاح.");
+    } catch (error) {
+      console.error(error);
+      alert(friendlyAuthError(error));
+    } finally {
+      button.disabled = false;
+      button.textContent = "تأكيد الرمز والدخول";
+    }
+  }
+
+  async function saveNewPassword() {
+    if (!db) return;
+
+    const password = $("new-password")?.value || "";
+    if (password.length < 6)
+      return alert("كلمة المرور يجب أن تكون 6 أحرف على الأقل.");
+
+    const button = $("save-new-password-btn");
+    button.disabled = true;
+
+    try {
+      const { error } = await db.auth.updateUser({ password });
+      if (error) throw error;
+
+      $("new-password-box")?.classList.add("hidden");
+      $("new-password").value = "";
+      alert("تم تغيير كلمة المرور بنجاح.");
+      await refreshAuth();
+    } catch (error) {
+      console.error(error);
+      alert(friendlyAuthError(error));
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   async function logout() {
     if (!db) return;
 
     const { error } = await db.auth.signOut();
-
     if (error) {
       alert(friendlyAuthError(error));
       return;
@@ -526,7 +535,7 @@
     favorites = new Set();
     await refreshAuth();
     showPage("home");
-    alert("تم تسجيل الخروج. يمكنك متابعة التصفح كزائر.");
+    alert("تم تسجيل الخروج.");
   }
 
   function init() {
@@ -542,11 +551,7 @@
       SUPABASE_ANON_KEY !== "ضع_المفتاح_هنا"
     ) {
       try {
-        db = window.supabase.createClient(
-          SUPABASE_URL,
-          SUPABASE_ANON_KEY
-        );
-
+        db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         window.shamelDB = db;
 
         loadCategories();
@@ -555,9 +560,10 @@
 
         db.auth.onAuthStateChange((event) => {
           if (event === "PASSWORD_RECOVERY") {
-            alert("تم فتح رابط استعادة كلمة المرور. إعداد تغيير كلمة المرور داخل الموقع يحتاج استكمالًا.");
+            $("new-password-box")?.classList.remove("hidden");
+            showPage("account");
+            alert("أدخل كلمة المرور الجديدة لحسابك.");
           }
-
           setTimeout(() => refreshAuth(), 0);
         });
       } catch (error) {
@@ -570,19 +576,21 @@
 
     $("search")?.addEventListener("input", e => {
       const q = e.target.value.trim().toLowerCase();
-
-      renderProducts(
-        products.filter(p =>
-          [p.name, p.description, getCategoryName(p.category_id)]
-            .some(v => String(v || "").toLowerCase().includes(q))
-        )
-      );
+      renderProducts(products.filter(p =>
+        [p.name, p.description, getCategoryName(p.category_id)]
+          .some(v => String(v || "").toLowerCase().includes(q))
+      ));
     });
 
     $("login-btn")?.addEventListener("click", () => authAction("login"));
     $("signup-btn")?.addEventListener("click", () => authAction("signup"));
     $("reset-btn")?.addEventListener("click", () => authAction("reset"));
     $("logout-btn")?.addEventListener("click", logout);
+
+    $("google-btn")?.addEventListener("click", googleLogin);
+    $("phone-send-btn")?.addEventListener("click", sendPhoneCode);
+    $("phone-verify-btn")?.addEventListener("click", verifyPhoneCode);
+    $("save-new-password-btn")?.addEventListener("click", saveNewPassword);
   }
 
   window.showPage = showPage;
