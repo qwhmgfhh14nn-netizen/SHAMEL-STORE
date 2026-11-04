@@ -1,38 +1,42 @@
+
 (() => {
   "use strict";
 
-  const db = window.shamelSupabase || window.supabaseClient;
-
   const $ = (id) => document.getElementById(id);
 
-  const escapeHTML = (value) =>
-    String(value ?? "").replace(/[&<>"']/g, (char) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
-    })[char]);
+  // الحصول على الاتصال وقت الاستخدام، وليس وقت تحميل الملف
+  function getDB() {
+    return window.shamelSupabase || window.supabaseClient;
+  }
 
-  const message = (container, text) => {
-    if (container) container.textContent = text;
-  };
+  function show(id, message) {
+    const element = $(id);
+    if (element) element.textContent = message;
+  }
 
-  async function requireClient() {
+  function getTarget(ids) {
+    for (const id of ids) {
+      const element = $(id);
+      if (element) return element;
+    }
+    return null;
+  }
+
+  async function requireUser() {
+    const db = getDB();
+
     if (!db) {
-      throw new Error(
-        "لم يتم العثور على عميل Supabase. اربط العميل باسم window.shamelSupabase أولاً."
-      );
+      throw new Error("اتصال قاعدة البيانات غير جاهز. راجع app.js.");
     }
 
     const { data, error } = await db.auth.getUser();
     if (error) throw error;
     if (!data.user) throw new Error("سجّل الدخول أولاً.");
 
-    return data.user;
+    return { db, user: data.user };
   }
 
-  async function getRole(userId) {
+  async function getRole(db, userId) {
     const { data, error } = await db
       .from("user_roles")
       .select("role")
@@ -40,42 +44,26 @@
 
     if (error) throw error;
 
-    const roles = (data || []).map((row) => row.role);
+    const roles = (data || []).map(row => row.role);
+
     if (roles.includes("owner")) return "owner";
     if (roles.includes("seller")) return "seller";
-    return "customer";
+    return "buyer";
   }
 
-  async function init() {
-    const label = $("dashboard-role");
+  async function checkAccess(requiredRole) {
+    const { db, user } = await requireUser();
+    const role = await getRole(db, user.id);
 
-    try {
-      const user = await requireClient();
-      const role = await getRole(user.id);
-
-      if (label) {
-        label.textContent =
-          role === "owner" ? "مرحباً بك في لوحة المالك" :
-          role === "seller" ? "مرحباً بك في لوحة التاجر" :
-          "هذا الحساب لا يملك صلاحية لوحة التحكم.";
-      }
-
-      if ($("owner-tools")) {
-        $("owner-tools").style.display =
-          role === "owner" ? "block" : "none";
-      }
-
-      if ($("seller-tools")) {
-        $("seller-tools").style.display =
-          role === "seller" ? "block" : "none";
-      }
-    } catch (error) {
-      if (label) label.textContent = error.message;
+    if (role !== requiredRole) {
+      throw new Error("ليس لديك صلاحية الوصول لهذا القسم.");
     }
+
+    return { db, user };
   }
 
-  async function showRows(containerId, rows, columns) {
-    const container = $(containerId);
+  function showRows(ids, rows, columns) {
+    const container = getTarget(ids);
     if (!container) return;
 
     if (!rows || rows.length === 0) {
@@ -89,23 +77,23 @@
 
     const header = document.createElement("tr");
 
-    columns.forEach((column) => {
+    columns.forEach(column => {
       const th = document.createElement("th");
       th.textContent = column.label;
-      th.style.padding = "8px";
-      th.style.borderBottom = "1px solid #ddd";
+      th.style.padding = "10px";
+      th.style.borderBottom = "1px solid #d4af37";
       header.appendChild(th);
     });
 
     table.appendChild(header);
 
-    rows.forEach((row) => {
+    rows.forEach(row => {
       const tr = document.createElement("tr");
 
-      columns.forEach((column) => {
+      columns.forEach(column => {
         const td = document.createElement("td");
         td.textContent = String(row[column.key] ?? "");
-        td.style.padding = "8px";
+        td.style.padding = "10px";
         td.style.borderBottom = "1px solid #eee";
         tr.appendChild(td);
       });
@@ -116,99 +104,117 @@
     container.replaceChildren(table);
   }
 
-  async function loadProducts() {
+  async function loadTable(role, tableName, ids, columns, query) {
     try {
-      await requireClient();
+      const { db } = await checkAccess(role);
 
-      const { data, error } = await db
-        .from("products")
-        .select("id,name,price,stock,is_published,created_at")
+      let request = db.from(tableName).select(query || "*");
+
+      const { data, error } = await request
         .order("created_at", { ascending: false })
         .limit(100);
 
       if (error) throw error;
 
-      await showRows("owner-dashboard-content", data, [
+      showRows(ids, data, columns);
+    } catch (error) {
+      show(ids[0], error.message);
+    }
+  }
+
+  async function init() {
+    try {
+      const { db, user } = await requireUser();
+      const role = await getRole(db, user.id);
+
+      show(
+        "dashboard-role",
+        role === "owner"
+          ? "مرحباً بك في لوحة المالك"
+          : role === "seller"
+            ? "مرحباً بك في لوحة التاجر"
+            : "حساب عميل"
+      );
+
+      const ownerTools = $("owner-tools");
+      const sellerTools = $("seller-tools");
+      const noAccess = $("dashboard-no-access");
+
+      if (ownerTools) {
+        ownerTools.style.display = role === "owner" ? "block" : "none";
+      }
+
+      if (sellerTools) {
+        sellerTools.style.display = role === "seller" ? "block" : "none";
+      }
+
+      if (noAccess) {
+        noAccess.style.display =
+          role === "buyer" ? "block" : "none";
+      }
+    } catch (error) {
+      show("dashboard-role", error.message);
+      show("dashboard-login-required", error.message);
+    }
+  }
+
+  // أقسام المالك
+  async function loadProducts() {
+    await loadTable("owner", "products",
+      ["owner-products-content", "owner-dashboard-content"],
+      [
         { key: "name", label: "المنتج" },
         { key: "price", label: "السعر" },
         { key: "stock", label: "المخزون" },
         { key: "is_published", label: "منشور" }
-      ]);
-    } catch (error) {
-      message($("owner-dashboard-content"), error.message);
-    }
+      ],
+      "id,name,price,stock,is_published,created_at"
+    );
   }
 
   async function loadOrders() {
-    try {
-      await requireClient();
-
-      const { data, error } = await db
-        .from("orders")
-        .select("id,buyer_id,total_amount,status,created_at")
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      if (error) throw error;
-
-      await showRows("owner-dashboard-content", data, [
+    await loadTable("owner", "orders",
+      ["owner-orders-content", "owner-dashboard-content"],
+      [
         { key: "id", label: "رقم الطلب" },
         { key: "buyer_id", label: "العميل" },
         { key: "total_amount", label: "الإجمالي" },
         { key: "status", label: "الحالة" }
-      ]);
-    } catch (error) {
-      message($("owner-dashboard-content"), error.message);
-    }
+      ],
+      "id,buyer_id,total_amount,status,created_at"
+    );
   }
 
   async function loadStores() {
-    try {
-      await requireClient();
-
-      const { data, error } = await db
-        .from("stores")
-        .select("id,name,seller_id,is_active,created_at")
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      if (error) throw error;
-
-      await showRows("owner-dashboard-content", data, [
+    await loadTable("owner", "stores",
+      ["owner-sellers-content", "owner-dashboard-content"],
+      [
         { key: "name", label: "المتجر" },
         { key: "seller_id", label: "التاجر" },
         { key: "is_active", label: "نشط" }
-      ]);
-    } catch (error) {
-      message($("owner-dashboard-content"), error.message);
-    }
+      ],
+      "id,name,seller_id,is_active,created_at"
+    );
   }
 
   async function loadSubscriptionRequests() {
-    try {
-      await requireClient();
-
-      const { data, error } = await db
-        .from("subscription_requests")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      if (error) throw error;
-
-      await showRows("owner-dashboard-content", data, [
+    await loadTable("owner", "subscription_requests",
+      ["owner-subscriptions-content", "owner-dashboard-content"],
+      [
         { key: "seller_id", label: "التاجر" },
         { key: "status", label: "الحالة" },
         { key: "created_at", label: "تاريخ الطلب" }
-      ]);
-    } catch (error) {
-      message($("owner-dashboard-content"), error.message);
-    }
+      ],
+      "seller_id,plan_id,status,created_at"
+    );
   }
 
+  // أقسام التاجر
   async function loadMyProducts() {
+    const ids = ["seller-products-content", "seller-dashboard-content"];
+
     try {
-      const user = await requireClient();
+      const { db, user } = await checkAccess("seller");
 
       const { data: stores, error: storeError } = await db
         .from("stores")
@@ -217,73 +223,42 @@
 
       if (storeError) throw storeError;
 
-      const storeIds = (stores || []).map((store) => store.id);
+      const storeIds = (stores || []).map(store => store.id);
 
       if (!storeIds.length) {
-        message($("seller-dashboard-content"), "لا يوجد متجر مرتبط بحسابك.");
+        show(ids[0], "لا يوجد متجر مرتبط بحسابك.");
         return;
       }
 
       const { data, error } = await db
         .from("products")
-        .select("id,name,price,stock,is_published")
+        .select("id,name,price,stock,is_published,created_at")
         .in("store_id", storeIds)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      await showRows("seller-dashboard-content", data, [
+      showRows(ids, data, [
         { key: "name", label: "المنتج" },
         { key: "price", label: "السعر" },
         { key: "stock", label: "المخزون" },
         { key: "is_published", label: "منشور" }
       ]);
     } catch (error) {
-      message($("seller-dashboard-content"), error.message);
+      show(ids[0], error.message);
     }
   }
 
   async function loadMySubscriptions() {
-    try {
-      const user = await requireClient();
-
-      const { data, error } = await db
-        .from("seller_subscriptions")
-        .select("*")
-        .eq("seller_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      await showRows("seller-dashboard-content", data, [
+    await loadTable("seller", "seller_subscriptions",
+      ["seller-subscriptions-content", "seller-dashboard-content"],
+      [
         { key: "status", label: "الحالة" },
-        { key: "created_at", label: "تاريخ الاشتراك" }
-      ]);
-    } catch (error) {
-      message($("seller-dashboard-content"), error.message);
-    }
-  }
-
-  async function loadMyConversations() {
-    try {
-      const user = await requireClient();
-
-      const { data, error } = await db
-        .from("store_conversations")
-        .select("id,store_id,buyer_id,seller_id,created_at")
-        .eq("seller_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      await showRows("seller-dashboard-content", data, [
-        { key: "id", label: "المحادثة" },
-        { key: "buyer_id", label: "العميل" },
-        { key: "created_at", label: "التاريخ" }
-      ]);
-    } catch (error) {
-      message($("seller-dashboard-content"), error.message);
-    }
+        { key: "starts_at", label: "البداية" },
+        { key: "ends_at", label: "النهاية" }
+      ],
+      "status,starts_at,ends_at,created_at"
+    ).catch(() => {});
   }
 
   window.ShamelDashboard = {
@@ -293,9 +268,12 @@
     loadStores,
     loadSubscriptionRequests,
     loadMyProducts,
-    loadMySubscriptions,
-    loadMyConversations
+    loadMySubscriptions
   };
 
-  document.addEventListener("DOMContentLoaded", init);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();
