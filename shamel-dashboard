@@ -1,0 +1,301 @@
+(() => {
+  "use strict";
+
+  const db = window.shamelSupabase || window.supabaseClient;
+
+  const $ = (id) => document.getElementById(id);
+
+  const escapeHTML = (value) =>
+    String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    })[char]);
+
+  const message = (container, text) => {
+    if (container) container.textContent = text;
+  };
+
+  async function requireClient() {
+    if (!db) {
+      throw new Error(
+        "لم يتم العثور على عميل Supabase. اربط العميل باسم window.shamelSupabase أولاً."
+      );
+    }
+
+    const { data, error } = await db.auth.getUser();
+    if (error) throw error;
+    if (!data.user) throw new Error("سجّل الدخول أولاً.");
+
+    return data.user;
+  }
+
+  async function getRole(userId) {
+    const { data, error } = await db
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+
+    if (error) throw error;
+
+    const roles = (data || []).map((row) => row.role);
+    if (roles.includes("owner")) return "owner";
+    if (roles.includes("seller")) return "seller";
+    return "customer";
+  }
+
+  async function init() {
+    const label = $("dashboard-role");
+
+    try {
+      const user = await requireClient();
+      const role = await getRole(user.id);
+
+      if (label) {
+        label.textContent =
+          role === "owner" ? "مرحباً بك في لوحة المالك" :
+          role === "seller" ? "مرحباً بك في لوحة التاجر" :
+          "هذا الحساب لا يملك صلاحية لوحة التحكم.";
+      }
+
+      if ($("owner-tools")) {
+        $("owner-tools").style.display =
+          role === "owner" ? "block" : "none";
+      }
+
+      if ($("seller-tools")) {
+        $("seller-tools").style.display =
+          role === "seller" ? "block" : "none";
+      }
+    } catch (error) {
+      if (label) label.textContent = error.message;
+    }
+  }
+
+  async function showRows(containerId, rows, columns) {
+    const container = $(containerId);
+    if (!container) return;
+
+    if (!rows || rows.length === 0) {
+      container.textContent = "لا توجد بيانات حالياً.";
+      return;
+    }
+
+    const table = document.createElement("table");
+    table.style.width = "100%";
+    table.style.borderCollapse = "collapse";
+
+    const header = document.createElement("tr");
+
+    columns.forEach((column) => {
+      const th = document.createElement("th");
+      th.textContent = column.label;
+      th.style.padding = "8px";
+      th.style.borderBottom = "1px solid #ddd";
+      header.appendChild(th);
+    });
+
+    table.appendChild(header);
+
+    rows.forEach((row) => {
+      const tr = document.createElement("tr");
+
+      columns.forEach((column) => {
+        const td = document.createElement("td");
+        td.textContent = String(row[column.key] ?? "");
+        td.style.padding = "8px";
+        td.style.borderBottom = "1px solid #eee";
+        tr.appendChild(td);
+      });
+
+      table.appendChild(tr);
+    });
+
+    container.replaceChildren(table);
+  }
+
+  async function loadProducts() {
+    try {
+      await requireClient();
+
+      const { data, error } = await db
+        .from("products")
+        .select("id,name,price,stock,is_published,created_at")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      await showRows("owner-dashboard-content", data, [
+        { key: "name", label: "المنتج" },
+        { key: "price", label: "السعر" },
+        { key: "stock", label: "المخزون" },
+        { key: "is_published", label: "منشور" }
+      ]);
+    } catch (error) {
+      message($("owner-dashboard-content"), error.message);
+    }
+  }
+
+  async function loadOrders() {
+    try {
+      await requireClient();
+
+      const { data, error } = await db
+        .from("orders")
+        .select("id,buyer_id,total_amount,status,created_at")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      await showRows("owner-dashboard-content", data, [
+        { key: "id", label: "رقم الطلب" },
+        { key: "buyer_id", label: "العميل" },
+        { key: "total_amount", label: "الإجمالي" },
+        { key: "status", label: "الحالة" }
+      ]);
+    } catch (error) {
+      message($("owner-dashboard-content"), error.message);
+    }
+  }
+
+  async function loadStores() {
+    try {
+      await requireClient();
+
+      const { data, error } = await db
+        .from("stores")
+        .select("id,name,seller_id,is_active,created_at")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      await showRows("owner-dashboard-content", data, [
+        { key: "name", label: "المتجر" },
+        { key: "seller_id", label: "التاجر" },
+        { key: "is_active", label: "نشط" }
+      ]);
+    } catch (error) {
+      message($("owner-dashboard-content"), error.message);
+    }
+  }
+
+  async function loadSubscriptionRequests() {
+    try {
+      await requireClient();
+
+      const { data, error } = await db
+        .from("subscription_requests")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      await showRows("owner-dashboard-content", data, [
+        { key: "seller_id", label: "التاجر" },
+        { key: "status", label: "الحالة" },
+        { key: "created_at", label: "تاريخ الطلب" }
+      ]);
+    } catch (error) {
+      message($("owner-dashboard-content"), error.message);
+    }
+  }
+
+  async function loadMyProducts() {
+    try {
+      const user = await requireClient();
+
+      const { data: stores, error: storeError } = await db
+        .from("stores")
+        .select("id")
+        .eq("seller_id", user.id);
+
+      if (storeError) throw storeError;
+
+      const storeIds = (stores || []).map((store) => store.id);
+
+      if (!storeIds.length) {
+        message($("seller-dashboard-content"), "لا يوجد متجر مرتبط بحسابك.");
+        return;
+      }
+
+      const { data, error } = await db
+        .from("products")
+        .select("id,name,price,stock,is_published")
+        .in("store_id", storeIds)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      await showRows("seller-dashboard-content", data, [
+        { key: "name", label: "المنتج" },
+        { key: "price", label: "السعر" },
+        { key: "stock", label: "المخزون" },
+        { key: "is_published", label: "منشور" }
+      ]);
+    } catch (error) {
+      message($("seller-dashboard-content"), error.message);
+    }
+  }
+
+  async function loadMySubscriptions() {
+    try {
+      const user = await requireClient();
+
+      const { data, error } = await db
+        .from("seller_subscriptions")
+        .select("*")
+        .eq("seller_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      await showRows("seller-dashboard-content", data, [
+        { key: "status", label: "الحالة" },
+        { key: "created_at", label: "تاريخ الاشتراك" }
+      ]);
+    } catch (error) {
+      message($("seller-dashboard-content"), error.message);
+    }
+  }
+
+  async function loadMyConversations() {
+    try {
+      const user = await requireClient();
+
+      const { data, error } = await db
+        .from("store_conversations")
+        .select("id,store_id,buyer_id,seller_id,created_at")
+        .eq("seller_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      await showRows("seller-dashboard-content", data, [
+        { key: "id", label: "المحادثة" },
+        { key: "buyer_id", label: "العميل" },
+        { key: "created_at", label: "التاريخ" }
+      ]);
+    } catch (error) {
+      message($("seller-dashboard-content"), error.message);
+    }
+  }
+
+  window.ShamelDashboard = {
+    init,
+    loadProducts,
+    loadOrders,
+    loadStores,
+    loadSubscriptionRequests,
+    loadMyProducts,
+    loadMySubscriptions,
+    loadMyConversations
+  };
+
+  document.addEventListener("DOMContentLoaded", init);
+})();
