@@ -1,38 +1,354 @@
+
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#102b46"><title>SHAMEL | شامل</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#102b46">
+<title>SHAMEL | شامل</title>
+
 <style>
-*{box-sizing:border-box}body{margin:0;padding-bottom:80px;background:#f5f7fa;color:#172b40;font-family:Arial}
-header,footer{background:#102b46;color:white;padding:18px}header p{margin-bottom:0}
-.logo{font-size:25px;font-weight:bold}.logo span{color:#e9b94e}
-button{border:0;border-radius:9px;padding:11px;cursor:pointer}.gold{background:#e9b94e;color:#102b46;font-weight:bold}.light{background:white;color:#102b46;border:1px solid #ddd}
-main{padding:14px}.page{display:none}.page.active{display:block}.hero,.panel,.empty{background:white;border-radius:14px;padding:18px;margin:12px 0}.hero{background:#102b46;color:white}
-input,textarea{width:100%;padding:12px;border:1px solid #ddd;border-radius:9px;margin:6px 0}
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.product{background:white;border:1px solid #eee;border-radius:12px;overflow:hidden}.product img{width:100%;height:140px;object-fit:cover}.product-info{padding:10px}.price{color:#08734e;font-weight:bold}
-.muted{color:#687789;font-size:13px}.status{background:#eef5f9;padding:10px;border-radius:9px;margin:10px 0}
-nav{display:flex;gap:7px;overflow:auto;padding:12px}nav button{white-space:nowrap;background:white}
+*{box-sizing:border-box}
+body{margin:0;padding-bottom:80px;background:#f5f7fa;color:#172b40;font-family:Arial}
+header,footer{background:#102b46;color:white;padding:18px}
+header p{margin-bottom:0}
+.logo{font-size:25px;font-weight:bold}
+.logo span{color:#e9b94e}
+button{border:0;border-radius:9px;padding:11px;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+.gold{background:#e9b94e;color:#102b46;font-weight:bold}
+.light{background:white;color:#102b46;border:1px solid #ddd}
+main{padding:14px}
+.page{display:none}
+.page.active{display:block}
+.hero,.panel,.empty{background:white;border-radius:14px;padding:18px;margin:12px 0}
+.hero{background:#102b46;color:white}
+input,textarea,select{width:100%;padding:12px;border:1px solid #ddd;border-radius:9px;margin:6px 0}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.product{background:white;border:1px solid #eee;border-radius:12px;overflow:hidden}
+.product img{width:100%;height:140px;object-fit:cover}
+.product-info{padding:10px}
+.price{color:#08734e;font-weight:bold}
+.muted{color:#687789;font-size:13px}
+.status{background:#eef5f9;padding:10px;border-radius:9px;margin:10px 0}
+nav{display:flex;gap:7px;overflow:auto;padding:12px}
+nav button{white-space:nowrap;background:white}
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:white;display:grid;grid-template-columns:repeat(5,1fr);z-index:5}
-.bottom-nav button{background:white;font-size:12px}.bottom-nav .active{background:#fff4d6}
-.actions{display:flex;gap:8px}.actions button{flex:1}.hidden{display:none!important}
-@media(min-width:700px){main{max-width:1000px;margin:auto}.grid{grid-template-columns:repeat(4,1fr)}}
-</style></head><body>
-<header><div class="logo">SHAMEL <span>شامل</span></div><p>كل احتياجاتك في مكان واحد</p><button class="gold" onclick="showPage('account')">حسابي</button></header>
+.bottom-nav button{background:white;font-size:12px}
+.bottom-nav .active{background:#fff4d6}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.actions button{flex:1}
+.hidden{display:none!important}
+.dashboard-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.dashboard-tabs button{background:#edf1f5;color:#102b46}
+.dashboard-card{border:1px solid #e5e9ef;border-radius:12px;padding:14px;margin:10px 0;background:#fff}
+.dashboard-card h3{margin-top:0}
+footer{text-align:center}
+a{color:inherit}
+@media(min-width:700px){
+ main{max-width:1000px;margin:auto}
+ .grid{grid-template-columns:repeat(4,1fr)}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">SHAMEL <span>شامل</span></div>
+  <p>كل احتياجاتك في مكان واحد</p>
+  <button class="gold" onclick="showPage('account')">حسابي</button>
+</header>
+
 <input id="search" placeholder="ابحث عن المنتجات..." style="width:calc(100% - 28px);margin:14px">
-<nav><button onclick="showPage('home')">الرئيسية</button><button onclick="showPage('categories')">الأقسام</button></nav>
-<section id="home" class="page active"><main><div class="hero"><h2>أهلاً بك في SHAMEL</h2><p>اكتشف المنتجات وتسوق بسهولة.</p></div><div id="connection-status" class="status">جارٍ الاتصال...</div><div id="products-grid" class="grid"></div><div id="products-empty" class="empty hidden">لا توجد منتجات منشورة حاليًا.</div></main></section>
-<section id="categories" class="page"><main><h2>الأقسام</h2><div id="categories-list" class="grid"></div><div id="categories-empty" class="empty hidden">لا توجد أقسام.</div></main></section>
-<section id="cart" class="page"><main><h2>سلة التسوق</h2><div id="cart-content"></div></main></section>
-<section id="favorites" class="page"><main><h2>المفضلة</h2><div id="favorites-grid" class="grid"></div><div id="favorites-empty" class="empty">لا توجد مفضلة.</div></main></section>
-<section id="orders" class="page"><main><h2>طلباتي</h2><div id="orders-content"></div></main></section>
-<section id="account" class="page"><main><h2>حسابي</h2><div id="auth-status" class="status">زائر</div>
-<div id="auth-form" class="panel"><button id="google-btn" class="light">Google</button><h3>رقم الهاتف</h3><input id="auth-phone" placeholder="+201xxxxxxxxx"><button id="phone-send-btn" class="gold">إرسال الرمز</button><div id="phone-verify-box" class="hidden"><input id="phone-otp" placeholder="رمز التحقق"><button id="phone-verify-btn">تأكيد</button></div>
-<h3>البريد الإلكتروني</h3><input id="auth-email" type="email" placeholder="البريد الإلكتروني"><input id="auth-password" type="password" placeholder="كلمة المرور">
-<div class="actions"><button id="login-btn" class="gold">دخول</button><button id="signup-btn" class="light">إنشاء حساب</button></div><button id="reset-btn" class="light">نسيت كلمة المرور؟</button>
-<div id="new-password-box" class="hidden"><input id="new-password" type="password" placeholder="كلمة المرور الجديدة"><button id="save-new-password-btn">حفظ</button></div></div>
-<div id="signed-in-panel" class="panel hidden"><button onclick="showPage('orders')">طلباتي</button><button id="logout-btn">تسجيل الخروج</button></div>
-<p><a href="https://wa.me/201206449934">تواصل عبر واتساب</a></p></main></section>
-<footer><div class="logo">SHAMEL <span>شامل</span></div><p>SHAMEL © 2026</p></footer>
-<div class="bottom-nav"><button data-page="home" class="active" onclick="showPage('home')">🏠 الرئيسية</button><button data-page="categories" onclick="showPage('categories')">الأقسام</button><button data-page="cart" onclick="showPage('cart')">🛒 السلة</button><button data-page="favorites" onclick="showPage('favorites')">♡ المفضلة</button><button data-page="account" onclick="showPage('account')">حسابي</button></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js"></script><script src="app.js"></script></body></html>
+
+<nav>
+  <button onclick="showPage('home')">الرئيسية</button>
+  <button onclick="showPage('categories')">الأقسام</button>
+</nav>
+
+<section id="home" class="page active">
+  <main>
+    <div class="hero">
+      <h2>أهلاً بك في SHAMEL</h2>
+      <p>اكتشف المنتجات وتسوق بسهولة.</p>
+    </div>
+    <div id="connection-status" class="status">جارٍ الاتصال...</div>
+    <div id="products-grid" class="grid"></div>
+    <div id="products-empty" class="empty hidden">لا توجد منتجات منشورة حاليًا.</div>
+  </main>
+</section>
+
+<section id="categories" class="page">
+  <main>
+    <h2>الأقسام</h2>
+    <div id="categories-list" class="grid"></div>
+    <div id="categories-empty" class="empty hidden">لا توجد أقسام.</div>
+  </main>
+</section>
+
+<section id="cart" class="page">
+  <main>
+    <h2>سلة التسوق</h2>
+    <div id="cart-content"></div>
+  </main>
+</section>
+
+<section id="favorites" class="page">
+  <main>
+    <h2>المفضلة</h2>
+    <div id="favorites-grid" class="grid"></div>
+    <div id="favorites-empty" class="empty">لا توجد مفضلة.</div>
+  </main>
+</section>
+
+<section id="orders" class="page">
+  <main>
+    <h2>طلباتي</h2>
+    <div id="orders-content"></div>
+  </main>
+</section>
+
+<section id="account" class="page">
+  <main>
+    <h2>حسابي</h2>
+
+    <div id="auth-status" class="status">زائر</div>
+
+    <div id="auth-form" class="panel">
+      <button id="google-btn" class="light">تسجيل الدخول باستخدام Google</button>
+
+      <h3>رقم الهاتف</h3>
+      <input id="auth-phone" placeholder="+201xxxxxxxxx">
+      <button id="phone-send-btn" class="gold">إرسال الرمز</button>
+
+      <div id="phone-verify-box" class="hidden">
+        <input id="phone-otp" placeholder="رمز التحقق">
+        <button id="phone-verify-btn">تأكيد</button>
+      </div>
+
+      <h3>البريد الإلكتروني</h3>
+      <input id="auth-email" type="email" placeholder="البريد الإلكتروني">
+      <input id="auth-password" type="password" placeholder="كلمة المرور">
+
+      <div class="actions">
+        <button id="login-btn" class="gold">دخول</button>
+        <button id="signup-btn" class="light">إنشاء حساب</button>
+      </div>
+
+      <button id="reset-btn" class="light">نسيت كلمة المرور؟</button>
+
+      <div id="new-password-box" class="hidden">
+        <input id="new-password" type="password" placeholder="كلمة المرور الجديدة">
+        <button id="save-new-password-btn">حفظ</button>
+      </div>
+    </div>
+
+    <div id="signed-in-panel" class="panel hidden">
+      <button onclick="showPage('orders')">طلباتي</button>
+      <button onclick="showPage('dashboard')">لوحة التحكم</button>
+      <button id="logout-btn">تسجيل الخروج</button>
+    </div>
+
+    <p><a href="https://wa.me/201206449934">تواصل عبر واتساب</a></p>
+  </main>
+</section>
+
+<!-- لوحة تحكم المالك والتاجر -->
+<section id="dashboard" class="page">
+  <main>
+    <h2>لوحة التحكم</h2>
+
+    <div id="dashboard-role" class="status">
+      جارٍ التحقق من صلاحيات الحساب...
+    </div>
+
+    <div id="dashboard-login-required" class="empty hidden">
+      يجب تسجيل الدخول أولاً.
+      <button class="gold" onclick="showPage('account')">تسجيل الدخول</button>
+    </div>
+
+    <div id="owner-tools" class="panel hidden">
+      <h3>لوحة المالك</h3>
+
+      <div class="dashboard-tabs">
+        <button onclick="SHAMELDashboard.showSection('owner-overview')">الرئيسية</button>
+        <button onclick="SHAMELDashboard.showSection('owner-products')">المنتجات</button>
+        <button onclick="SHAMELDashboard.showSection('owner-orders')">الطلبات</button>
+        <button onclick="SHAMELDashboard.showSection('owner-sellers')">التجار</button>
+        <button onclick="SHAMELDashboard.showSection('owner-subscriptions')">الاشتراكات</button>
+      </div>
+
+      <div id="owner-overview" class="dashboard-card">
+        <h3>مرحباً بك في إدارة SHAMEL</h3>
+        <p>من هنا يمكنك متابعة أقسام الإدارة.</p>
+        <p>ستظهر بيانات الإدارة بعد ربط وظائف لوحة التحكم.</p>
+      </div>
+
+      <div id="owner-products" class="dashboard-card hidden">
+        <h3>إدارة المنتجات</h3>
+        <div id="owner-products-content">سيتم تحميل المنتجات هنا.</div>
+      </div>
+
+      <div id="owner-orders" class="dashboard-card hidden">
+        <h3>إدارة الطلبات</h3>
+        <div id="owner-orders-content">سيتم تحميل الطلبات هنا.</div>
+      </div>
+
+      <div id="owner-sellers" class="dashboard-card hidden">
+        <h3>إدارة التجار</h3>
+        <div id="owner-sellers-content">سيتم تحميل التجار هنا.</div>
+      </div>
+
+      <div id="owner-subscriptions" class="dashboard-card hidden">
+        <h3>طلبات الاشتراك</h3>
+        <div id="owner-subscriptions-content">ستظهر طلبات الاشتراك هنا.</div>
+      </div>
+
+      <div id="owner-dashboard-content"></div>
+    </div>
+
+    <div id="seller-tools" class="panel hidden">
+      <h3>لوحة التاجر</h3>
+
+      <div class="dashboard-tabs">
+        <button onclick="SHAMELDashboard.showSection('seller-overview')">الرئيسية</button>
+        <button onclick="SHAMELDashboard.showSection('seller-products')">منتجاتي</button>
+        <button onclick="SHAMELDashboard.showSection('seller-store')">متجري</button>
+        <button onclick="SHAMELDashboard.showSection('seller-subscriptions')">باقاتي</button>
+      </div>
+
+      <div id="seller-overview" class="dashboard-card">
+        <h3>مرحباً بك في لوحة التاجر</h3>
+        <p>تابع متجرك ومنتجاتك وطلباتك من هنا.</p>
+      </div>
+
+      <div id="seller-products" class="dashboard-card hidden">
+        <h3>إدارة منتجاتي</h3>
+        <div id="seller-products-content">ستظهر منتجات متجرك هنا.</div>
+      </div>
+
+      <div id="seller-store" class="dashboard-card hidden">
+        <h3>بيانات المتجر</h3>
+        <div id="seller-store-content">ستظهر بيانات متجرك هنا.</div>
+      </div>
+
+      <div id="seller-subscriptions" class="dashboard-card hidden">
+        <h3>اشتراكات التاجر</h3>
+        <div id="seller-subscriptions-content">ستظهر باقاتك هنا.</div>
+      </div>
+
+      <div id="seller-dashboard-content"></div>
+    </div>
+
+    <div id="dashboard-no-access" class="empty hidden">
+      لا تملك صلاحية دخول لوحة التحكم.
+    </div>
+  </main>
+</section>
+
+<footer>
+  <div class="logo">SHAMEL <span>شامل</span></div>
+  <p>SHAMEL © 2026</p>
+  <p>كل احتياجاتك في مكان واحد</p>
+</footer>
+
+<div class="bottom-nav">
+  <button data-page="home" class="active" onclick="showPage('home')">🏠 الرئيسية</button>
+  <button data-page="categories" onclick="showPage('categories')">الأقسام</button>
+  <button data-page="cart" onclick="showPage('cart')">🛒 السلة</button>
+  <button data-page="favorites" onclick="showPage('favorites')">♡ المفضلة</button>
+  <button data-page="account" onclick="showPage('account')">حسابي</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="app.js"></script>
+
+<script>
+(function(){
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+
+  function showSection(id){
+    document.querySelectorAll("#dashboard .dashboard-card")
+      .forEach(el => el.classList.add("hidden"));
+
+    $(id)?.classList.remove("hidden");
+  }
+
+  async function loadRole(){
+    const roleBox = $("dashboard-role");
+    const owner = $("owner-tools");
+    const seller = $("seller-tools");
+    const noAccess = $("dashboard-no-access");
+    const loginRequired = $("dashboard-login-required");
+
+    if(owner) owner.classList.add("hidden");
+    if(seller) seller.classList.add("hidden");
+    if(noAccess) noAccess.classList.add("hidden");
+    if(loginRequired) loginRequired.classList.add("hidden");
+
+    const db = window.shamelSupabase || window.supabaseClient;
+
+    if(!db){
+      if(roleBox) roleBox.textContent = "تعذر الاتصال بقاعدة البيانات.";
+      return;
+    }
+
+    const {data:{session}} = await db.auth.getSession();
+    const user = session?.user;
+
+    if(!user){
+      if(roleBox) roleBox.textContent = "يجب تسجيل الدخول أولاً.";
+      loginRequired?.classList.remove("hidden");
+      return;
+    }
+
+    const {data,error} = await db
+      .from("user_roles")
+      .select("role")
+      .eq("user_id",user.id)
+      .maybeSingle();
+
+    if(error){
+      if(roleBox) roleBox.textContent = "تعذر التحقق من الصلاحيات.";
+      console.error(error);
+      return;
+    }
+
+    const role = data?.role;
+
+    if(roleBox) roleBox.textContent =
+      role === "owner" ? "تم التحقق: المالك" :
+      role === "seller" ? "تم التحقق: التاجر" :
+      role === "buyer" ? "حساب عميل" : "حساب زائر";
+
+    if(role === "owner"){
+      owner?.classList.remove("hidden");
+      showSection("owner-overview");
+    }else if(role === "seller"){
+      seller?.classList.remove("hidden");
+      showSection("seller-overview");
+    }else{
+      noAccess?.classList.remove("hidden");
+    }
+  }
+
+  window.SHAMELDashboard = {
+    showSection,
+    loadRole
+  };
+
+  document.addEventListener("click",function(e){
+    const button = e.target.closest('[onclick*="showPage(\'dashboard\')"]');
+    if(button) setTimeout(loadRole,100);
+  });
+
+  window.addEventListener("load",loadRole);
+})();
+</script>
+
+</body>
+</html>
